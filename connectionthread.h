@@ -30,10 +30,13 @@ public:
     void DeleteConnection(ConnectionPtr conn);
 
     list<ConnectionPtr> connections_;
+    mutex mutex_new_;
     list<ConnectionPtr> connections_new_;
+    mutex mutex_removed_;
     list<ConnectionPtr> connections_removed_;
+    mutex mutex_map_;
     unordered_map<int,ConnectionPtr> fds_connections_;
-    mutex mutex_connections;
+    //mutex mutex_connections;
     int max_connection_;
 
     int epoll_fd_;
