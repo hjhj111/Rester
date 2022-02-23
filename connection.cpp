@@ -1,4 +1,4 @@
-#include "resterconnection.h"
+#include "connection.h"
 #include"connectionthread.h"
 
 Connection::Connection(ResterServer* server):

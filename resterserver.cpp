@@ -1,6 +1,6 @@
 #include "resterserver.h"
-#include "config.h"
-#include "resterconnection.h"
+#include "utls.h"
+#include "connection.h"
 #include "connectionthread.h"
 #include "httpresponse.h"
 

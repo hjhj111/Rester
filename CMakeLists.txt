@@ -8,4 +8,4 @@ FILE(GLOB SC_FILES "*.cpp" "*.h")
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread")
-add_executable(Rester ${SC_FILES} config.cpp)
+add_executable(Rester ${SC_FILES} utls.cpp)

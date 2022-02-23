@@ -137,42 +137,25 @@ inline bool recv_once(int fd,char buf[],int& size_read)
         {
             printf("%s\n", strerror(errno));
             //break;
-            if (size_read==0)//&&(errno == EAGAIN||errno == EWOULDBLOCK)
+            if (size_read>0)// //(errno == EAGAIN||errno == EWOULDBLOCK)
             {
-                //link=false;
-                //try_n++;
-                //return size_read;
-                //return true;
-                re=false;
                 break;
             }
             else
             {
-                //re=false;
+                re=false;
                 break;
             }
-
-            //exit(33);
-            //return false;
-
-
         }
         else if(ret==0)
         {
-            //link=false;
-            //return size_read;
-            //return -1;
-            //break;
-            //exit(44);
-            //return false;
             re=false;
             break;
         }
         else
         {
             size_read+=ret;
-            break;
-            //return ret;
+            //break;
         }
     }
     cout<<"try_n        "<<try_n<<endl;

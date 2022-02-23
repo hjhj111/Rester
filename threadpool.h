@@ -1,7 +1,7 @@
 #ifndef THREADPOOL_H
 #define THREADPOOL_H
-#include<list>
-#include"config.h"
+#include<vector>
+#include"utls.h"
 //#include"resterconnection.h"
 //#include"connectionthread.h"
 
@@ -20,7 +20,8 @@ public:
 private:
     int max_thread_;
     int max_connection_;
-    list<ConnectionThread*> threads;
+    vector<ConnectionThread*> threads_;
+    int thread_ind_=0;
 };
 
 #endif // THREADPOOL_H

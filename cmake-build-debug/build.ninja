@@ -78,6 +78,12 @@ build CMakeFiles/Rester.dir/config.cpp.o: CXX_COMPILER__Rester_Debug /home/hj/CL
   OBJECT_DIR = CMakeFiles/Rester.dir
   OBJECT_FILE_DIR = CMakeFiles/Rester.dir
 
+build CMakeFiles/Rester.dir/connection.cpp.o: CXX_COMPILER__Rester_Debug /home/hj/CLionProjects/Rester/connection.cpp || cmake_object_order_depends_target_Rester
+  DEP_FILE = CMakeFiles/Rester.dir/connection.cpp.o.d
+  FLAGS = -std=c++11 -pthread -g -std=gnu++14
+  OBJECT_DIR = CMakeFiles/Rester.dir
+  OBJECT_FILE_DIR = CMakeFiles/Rester.dir
+
 build CMakeFiles/Rester.dir/connectionthread.cpp.o: CXX_COMPILER__Rester_Debug /home/hj/CLionProjects/Rester/connectionthread.cpp || cmake_object_order_depends_target_Rester
   DEP_FILE = CMakeFiles/Rester.dir/connectionthread.cpp.o.d
   FLAGS = -std=c++11 -pthread -g -std=gnu++14
@@ -86,12 +92,6 @@ build CMakeFiles/Rester.dir/connectionthread.cpp.o: CXX_COMPILER__Rester_Debug /
 
 build CMakeFiles/Rester.dir/main.cpp.o: CXX_COMPILER__Rester_Debug /home/hj/CLionProjects/Rester/main.cpp || cmake_object_order_depends_target_Rester
   DEP_FILE = CMakeFiles/Rester.dir/main.cpp.o.d
-  FLAGS = -std=c++11 -pthread -g -std=gnu++14
-  OBJECT_DIR = CMakeFiles/Rester.dir
-  OBJECT_FILE_DIR = CMakeFiles/Rester.dir
-
-build CMakeFiles/Rester.dir/resterconnection.cpp.o: CXX_COMPILER__Rester_Debug /home/hj/CLionProjects/Rester/resterconnection.cpp || cmake_object_order_depends_target_Rester
-  DEP_FILE = CMakeFiles/Rester.dir/resterconnection.cpp.o.d
   FLAGS = -std=c++11 -pthread -g -std=gnu++14
   OBJECT_DIR = CMakeFiles/Rester.dir
   OBJECT_FILE_DIR = CMakeFiles/Rester.dir
@@ -116,7 +116,7 @@ build CMakeFiles/Rester.dir/threadpool.cpp.o: CXX_COMPILER__Rester_Debug /home/h
 #############################################
 # Link the executable Rester
 
-build Rester: CXX_EXECUTABLE_LINKER__Rester_Debug CMakeFiles/Rester.dir/config.cpp.o CMakeFiles/Rester.dir/connectionthread.cpp.o CMakeFiles/Rester.dir/main.cpp.o CMakeFiles/Rester.dir/resterconnection.cpp.o CMakeFiles/Rester.dir/resterserver.cpp.o CMakeFiles/Rester.dir/threadpool.cpp.o
+build Rester: CXX_EXECUTABLE_LINKER__Rester_Debug CMakeFiles/Rester.dir/config.cpp.o CMakeFiles/Rester.dir/connection.cpp.o CMakeFiles/Rester.dir/connectionthread.cpp.o CMakeFiles/Rester.dir/main.cpp.o CMakeFiles/Rester.dir/resterserver.cpp.o CMakeFiles/Rester.dir/threadpool.cpp.o
   FLAGS = -std=c++11 -pthread -g
   OBJECT_DIR = CMakeFiles/Rester.dir
   POST_BUILD = :

@@ -9,7 +9,7 @@
 #include<sys/ioctl.h>
 #include <sys/epoll.h>
 #include "connectionthread.h"
-#include "resterconnection.h"
+#include "connection.h"
 #include<thread>
 #include <algorithm>
 
