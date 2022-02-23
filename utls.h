@@ -23,6 +23,8 @@
 #include"rapidjson/document.h"
 #include "rapidjson/filereadstream.h"
 
+#include "TimeCount.h"
+
 using namespace std;
 using namespace rapidjson;
 
@@ -117,6 +119,7 @@ using CloseCallBack=function<void(int)>;
 
 extern atomic<int> request_count;
 extern atomic<int> connection_count;
+extern atomic<int> add_and_delete_socket_time;
 extern int buf_size;
 
 inline bool recv_once(int fd,char buf[],int& size_read)
