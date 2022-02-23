@@ -135,7 +135,7 @@ bool ResterServer::Init()
 
     while(true)
     {
-        int nfds = epoll_wait(epoll_fd_, events, listen_n, 1);
+        int nfds = epoll_wait(epoll_fd_, events, listen_n, 5);
         //cout<<"server epoll go "<<nfds<<endl;
 
         if(nfds == -1 && errno == EINTR)

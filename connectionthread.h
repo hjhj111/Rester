@@ -3,6 +3,8 @@
 #include<list>
 #include<unordered_map>
 #include<mutex>
+#include <functional>
+#include <memory>
 #include<sys/epoll.h>
 
 #include"utls.h"
@@ -13,7 +15,7 @@ using namespace std;
 
 //class Connection;
 
-
+using ConnectionFunc=function<void(shared_ptr<Connection>conn)>;
 
 class ConnectionThread
 {
@@ -38,6 +40,8 @@ public:
 
     GetCallBack on_get_;
     CloseCallBack on_close_;
+
+    vector<ConnectionFunc> connection_funcs;
 };
 
 #endif // CONNECTIONTHREAD_H
