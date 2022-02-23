@@ -10,8 +10,8 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-    //fclose(stdout);
-    //fclose(stderr);
+    fclose(stdout);
+    fclose(stderr);
     Config config;
     config.Update();
     cout<<config;

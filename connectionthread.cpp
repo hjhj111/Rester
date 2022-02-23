@@ -32,6 +32,23 @@ void ConnectionThread::Init()
             //printf("connection thread running\n");
             //qDebug()<<"connection thread running";
             //cout<<connections_new_.size()<<endl;
+            if(!connections_removed_.empty())
+            {
+                lock_guard<mutex> guard(mutex_connections);
+                for(auto conn:connections_removed_)
+                {
+                    ret=epoll_ctl(epoll_fd_, EPOLL_CTL_DEL,conn->connectioned_fd_ , &conn->event_);
+                    if(ret<0)
+                    {
+                        perror("epoll remove wrong\n");
+                        exit(-1);
+                    }
+                    connections_.remove(conn);
+                    cout<<"remove connection in loop\n";
+                }
+                connections_removed_.clear();
+                //cout<<"hhhhhhhhhhhhhhh"<<endl;
+            }
             if(!connections_new_.empty())
             {
                 //cout<<connections_new_.front()->connectioned_fd_<<endl;
@@ -65,38 +82,21 @@ void ConnectionThread::Init()
                 }
                 connections_new_.clear();
             }
-            if(!connections_removed_.empty())
-            {
-                lock_guard<mutex> guard(mutex_connections);
-                for(auto conn:connections_removed_)
-                {
-                    ret=epoll_ctl(epoll_fd_, EPOLL_CTL_DEL,conn->connectioned_fd_ , &conn->event_);
-                    if(ret<0)
-                    {
-                        perror("epoll remove wrong\n");
-                        exit(-1);
-                    }
-                    connections_.remove(conn);
-                    cout<<"remove connection in loop\n";
-                }
-                connections_removed_.clear();
-                //cout<<"hhhhhhhhhhhhhhh"<<endl;
-            }
+
 
             epoll_event events[max_connection_];
             memset(events, 0x00, sizeof(epoll_event)*max_connection_);
-
             int nfds = epoll_wait(epoll_fd_, events, max_connection_, 1);
             //cout<<"epoll wait int connection thread "<<nfds<<"\\"<<sizeof(events)/sizeof(epoll_event)<<endl;
-            if(nfds == -1 && errno == EINTR)
+            //cout<<"connection nums "<<fds_connections_.size()<<endl;
+            if(nfds == -1 )//&& errno == EINTR
             {
-                //cout<<"no event int connectin thread"<<endl;
+                exit(-55);
                 continue;
             }
             for(int i = 0; i < nfds; ++i)
             {
-                //getchar();
-                //sleep(2);
+                cout<<"event in connection thread "<<events[i].events<<endl;
                 if(events[i].events & EPOLLIN)
                 {
                     cout<<"recieved in connection thread\n";
@@ -107,19 +107,6 @@ void ConnectionThread::Init()
                         DeleteConnection(fds_connections_[events[i].data.fd]);
                         cout<<"delete over"<<endl;
                     }
-
-                }
-                else if(events[i].events & EPOLLHUP)
-                {
-                    //qDebug()<<"something else in connection thread";
-                    cout<<"something else in connection thread"<<endl;
-                    cout<<fds_connections_[events[i].data.fd].use_count()<<endl;
-                    DeleteConnection(fds_connections_[events[i].data.fd]);
-                    //on_close_(events[i].data.fd);
-                }
-                else
-                {
-                    exit(-45);
                 }
 
             }
@@ -137,6 +124,7 @@ void ConnectionThread::AddConnection(ConnectionPtr conn)
         connections_new_.push_back(conn);
         fds_connections_[conn->connectioned_fd_]=conn;
         cout<<"add connection\n";
+        cout<<"connection nums "<<fds_connections_.size()<<endl;
     }
 }
 
@@ -149,6 +137,10 @@ void ConnectionThread::DeleteConnection(ConnectionPtr conn)
             connections_removed_.push_back(conn);
         //fds_connections_.remove(conn.connectioned_fd_);
             fds_connections_.erase(fds_connections_.find(conn->connectioned_fd_));
+            cout<<"delete connection"<<endl;
+            cout<<"connection nums "<<fds_connections_.size()<<endl;
         }
+
+
     }
 }

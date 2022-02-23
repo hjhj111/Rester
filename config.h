@@ -116,42 +116,67 @@ using PostCallBack=function<void(int)>;
 using CloseCallBack=function<void(int)>;
 
 extern atomic<int> request_count;
+extern atomic<int> connection_count;
 extern int buf_size;
 
-inline int recv_once(int fd,char buf[],bool& link)
+inline bool recv_once(int fd,char buf[],int& size_read)
 {
-    int size_read=0;
+    size_read=0;
     int ind=0;
-    link=true;
-    while (link)
+    int try_n=0;
+    bool re=true;
+    //link=true;
+    while (true)
     {
+        try_n++;
         int ret = recv(fd,buf+ind,buf_size-ind,MSG_DONTWAIT);
-        //cout<<ret<<endl;
-        if (ret== -1)
+        //ret = recv(fd,buf+ind,buf_size-ind,MSG_DONTWAIT);
+        //return false;
+        cout<<ret<<endl;
+        if (ret==-1)
         {
-            if (errno == EAGAIN||errno == EWOULDBLOCK)
+            printf("%s\n", strerror(errno));
+            //break;
+            if (size_read==0)//&&(errno == EAGAIN||errno == EWOULDBLOCK)
             {
                 //link=false;
-                return size_read;
+                //try_n++;
+                //return size_read;
+                //return true;
+                re=false;
+                break;
             }
             else
             {
-                link=false;
-                return size_read;
+                //re=false;
+                break;
             }
+
+            //exit(33);
+            //return false;
+
 
         }
         else if(ret==0)
         {
-            link=false;
-            return size_read;
+            //link=false;
+            //return size_read;
+            //return -1;
+            //break;
+            //exit(44);
+            //return false;
+            re=false;
+            break;
         }
         else
         {
             size_read+=ret;
+            break;
+            //return ret;
         }
     }
-    return size_read;
+    cout<<"try_n        "<<try_n<<endl;
+    return re;
 }
 
 inline int get_id()

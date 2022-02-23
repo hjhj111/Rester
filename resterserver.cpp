@@ -20,23 +20,27 @@ ResterServer::ResterServer(const Config& config)
     };
     on_get=[](int fd)
     {
+        request_count++;
         char buf[1000];
         char tosend[]="HTTP/1.1 200 OK\r\n"
                       "\r\n"
                       "gggggggg";
         cout<<"on_get  fd: "<<fd<<endl;
+        int size_read=0;
         bool link=true;
-        int ret= recv_once(fd,buf,link);
-        if(!link)
+        link= recv_once(fd,buf,size_read);
+        //int ret= recv(fd,buf,1000,0);
+        cout<<request_count<<endl;
+        if(!link||size_read==0)
         {
-            cout<<"not link "<<ret<<endl;
+            cout<<"not link "<<size_read<<endl;
             //close(fd);
-
             return;
             //exit(89);
         }
-        cout<<"linkkkkkkkkkkkkkkkkkkkkkkkkk"<<ret<<endl;
-        ret=send(fd,tosend,sizeof(tosend),MSG_DONTWAIT);
+        cout<<"linkkkkkkkkkkkkkkkkkkkkkkkkk"<<size_read<<endl;
+        int ret=send(fd,tosend,sizeof(tosend),MSG_DONTWAIT);
+        //int ret= write(fd,tosend,sizeof(tosend))
         if(ret<=0)
         {
             perror("send wrong\n");
@@ -128,11 +132,7 @@ bool ResterServer::Init()
         perror("epoll add");
         exit(-1);
     }
-    //test
-    char buf[1000];
-    char tosend[]="HTTP/1.1 200 OK\r\n"
-                  "\r\n"
-                  "gggggggg";
+
     while(true)
     {
         int nfds = epoll_wait(epoll_fd_, events, listen_n, 1);
@@ -147,13 +147,85 @@ bool ResterServer::Init()
         {
             if(events[i].data.fd == listen_fd_)  //监听新连接
             {
-                int nfd = accept(listen_fd_,(struct sockaddr*)&cin,&cin_len);
-                if(nfd == -1)
+                while(true)
                 {
-                    printf("failed accept, error = %s\n", strerror(errno));
-                    continue;
+                    int nfd = accept(listen_fd_,(struct sockaddr*)&cin,&cin_len);
+                    if(nfd == -1)
+                    {
+                        printf("failed accept, error = %s\n", strerror(errno));
+                        //continue;
+                        break;
+                    }
+                    cout<<"new connection______________________________________________________"<<nfd<<endl;
+                    connection_count++;
+                    cout<<"connection count "<<connection_count<<endl;
+                    auto connection=make_shared<Connection>(this);
+                    connection->connectioned_fd_ = nfd;
+                    connection->ip_ = ntohl(c_addr.sin_addr.s_addr);
+                    connection->port_ = ntohs(c_addr.sin_port);
+                    connection->is_on_ = false;
+                    //connection.on_get_=[](int fd){cout<<fd<<endl;};
+                    epoll_event ev;
+                    ev.events = EPOLLIN|EPOLLET|EPOLLRDHUP|EPOLLOUT|EPOLLERR;
+                    ev.data.fd = nfd;
+                    connection->event_=ev;
+                    on_connected(connection.get());
+
+                    ConnectionThread* thread=thread_pool_.GetThread();
+//                thread->on_get_=[](int fd){
+//                char buf1[]="hhhhhh";
+//                //write(fd,buf1,10);
+//                //cout<<fd<<"00000000000000000000000000000"<<endl;
+//                };
+                    connection->Init(thread);//connection detach  new connection go to connection thread;
+
+                    //getchar();
+                    //connections_.push_back(connection->GetShare());
+
+                    //event.events = EPOLLIN|EPOLLHUP|EPOLLET;
+                    //event.data.fd = nfd;
+                    //epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, nfd, &event);//加入监听连接队列
                 }
-                cout<<"new connection______________________________________________________"<<nfd<<endl;
+
+
+
+//                char buf[1000];
+//                int s=0;
+//                bool link=recv_once(nfd,buf,s);
+//                close(nfd);
+//                continue;
+
+//                char buf[1000];
+//                int s=0;
+//                bool link=recv_once(nfd,buf,s);
+//                buf[s]='\0';
+//                cout<<buf<<endl;
+//                link=false;
+//                if(link)
+//                {
+//                    cout<<"+++++++++++++++++++++++++++++++++++\n";
+//
+//                    char tosend[]="HTTP/1.1 200 OK\r\n"
+//                                  "\r\n"
+//                                  "gggggggg";
+//
+//                    //usleep(100000);
+//                    ret=send(nfd,tosend,sizeof(tosend),0);
+//                    cout<<"send ret             "<<ret<<endl;
+//                    //usleep(10000);
+//                    if(ret<=0)
+//                    {
+//                        perror("send wrong\n");
+//                        //exit(-1);
+//                    }
+//                }
+//                else
+//                {
+//                    cout<<"-----------------------------------------\n";
+//                }
+//
+//                close(nfd);
+//                continue;
 
 //                //test
 //                //ret=recv(nfd,buf,1000,MSG_DONTWAIT);
@@ -178,32 +250,7 @@ bool ResterServer::Init()
 //                continue;
 
 
-                auto connection=make_shared<Connection>(this);
-                connection->connectioned_fd_ = nfd;
-                connection->ip_ = ntohl(c_addr.sin_addr.s_addr);
-                connection->port_ = ntohs(c_addr.sin_port);
-                connection->is_on_ = false;
-                //connection.on_get_=[](int fd){cout<<fd<<endl;};
-                epoll_event ev;
-                ev.events = EPOLLIN|EPOLLET;
-                ev.data.fd = nfd;
-                connection->event_=ev;
-                on_connected(connection.get());
 
-                ConnectionThread* thread=thread_pool_.GetThread();
-//                thread->on_get_=[](int fd){
-//                char buf1[]="hhhhhh";
-//                //write(fd,buf1,10);
-//                //cout<<fd<<"00000000000000000000000000000"<<endl;
-//                };
-                connection->Init(thread);//connection detach  new connection go to connection thread;
-
-                //getchar();
-                //connections_.push_back(connection->GetShare());
-
-                //event.events = EPOLLIN|EPOLLHUP|EPOLLET;
-                //event.data.fd = nfd;
-                //epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, nfd, &event);//加入监听连接队列
 
             }
             //cout<<"hhhhhhhhhhhhhhh"<<endl;

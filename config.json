@@ -1,6 +1,6 @@
 {
 	"port": 5000,
-	"max_connection":100,
+	"max_connection":200,
 	"root_folder":"/home/hj/Rester/root",
 	"max_thread": 1
 }
