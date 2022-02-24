@@ -15,30 +15,32 @@
 #include <list>
 
 #include "http-parser/http_parser.h"
-#include "utls.h"
-#include"threadpool.h"
 
+//#include "utls.h"
+#include "threadpool.h"
 using namespace std;
-
-//class Connection;
-
-
-//class ThreadPool;
 
 class ResterServer
 {
+
 public:
     ResterServer(const Config&);
-    bool Init();
+
+    void Init();
 
     GetCallBack on_get;
+
     PostCallBack on_post;
-    ThreadPool thread_pool_;
+
 public:
+    ThreadPool thread_pool_;
+    //ThreadPool a;
+    atomic<bool> running_{true};
     int listen_fd_;
     int epoll_fd_;
     int max_connection_;
     int max_thread_;
+
 private:
     ConnectCallBack on_connected;
     list<shared_ptr<Connection>> connections_;

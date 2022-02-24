@@ -1,22 +1,32 @@
 #ifndef THREADPOOL_H
 #define THREADPOOL_H
 #include<vector>
-#include"utls.h"
-//#include"resterconnection.h"
-//#include"connectionthread.h"
 
-//#include"resterserver.h"
+//#include"utls.h"
+#include"connectionthread.h"
 
 using namespace std;
-
-class ConnectionThread;
 
 class ThreadPool
 {
 public:
-    ThreadPool();
+    ThreadPool()
+    {
+
+    }
+
+    ~ThreadPool()
+    {
+        for(auto connection_thread:threads_)
+        {
+            delete connection_thread;
+        }
+    }
+
     void Init(int max_thread,int max_connection,GetCallBack on_get);
+
     ConnectionThread* GetThread();
+
 private:
     int max_thread_;
     int max_connection_;

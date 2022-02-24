@@ -1,22 +1,18 @@
+#include <arpa/inet.h>
+
 #include "resterserver.h"
 #include "utls.h"
 #include "connection.h"
 #include "connectionthread.h"
 #include "httpresponse.h"
 
-//extern Config config;
-
 ResterServer::ResterServer(const Config& config)
     :max_connection_(config.max_connection),
       max_thread_(config.max_thread)
 {
-//    max_connection_=config.max_connection;
-//    max_thread_=config.max_thread;
-    //thread_pool_=ThreadPool(max_thread_);
-    on_connected=[](Connection* conn)
+    on_connected=[](ConnectionPtr conn)
     {
-        cout<<conn->ip_<<endl;
-        cout.flush();
+        //printf("on connected\n");
     };
     on_get=[](int fd)
     {
@@ -24,37 +20,27 @@ ResterServer::ResterServer(const Config& config)
         char buf[1000];
         char tosend[]="HTTP/1.1 200 OK\r\n"
                       "\r\n"
-                      "gggggggg";
-        cout<<"on_get  fd: "<<fd<<endl;
+                      "Hello Rester";
         int size_read=0;
         bool link=true;
         link= recv_once(fd,buf,size_read);
         //int ret= recv(fd,buf,1000,0);
-        cout<<request_count<<endl;
         if(!link||size_read==0)
         {
-            cout<<"not link "<<size_read<<endl;
-            //close(fd);
             return;
-            //exit(89);
         }
-        cout<<"linkkkkkkkkkkkkkkkkkkkkkkkkk"<<size_read<<endl;
         int ret=send(fd,tosend,sizeof(tosend),MSG_DONTWAIT);
-        //int ret= write(fd,tosend,sizeof(tosend))
         if(ret<=0)
         {
             perror("send wrong\n");
-            //exit(-1);
+            LOG_ERROR("send wrong int on_get");
         }
-        cout<<ret<<"send over\n";
-        //close(fd);
     };
     thread_pool_=ThreadPool();
     thread_pool_.Init(max_thread_,max_connection_,on_get);
-
 }
 
-bool ResterServer::Init()
+void ResterServer::Init()
 {
     struct sockaddr_in s_addr, c_addr;
     int ret=-1;
@@ -85,14 +71,14 @@ bool ResterServer::Init()
     if(flags < 0)
     {
           perror("fcntl F_GETFL");
-          exit(-1);
+          exit(1);
     }
     flags |= O_NONBLOCK;
     ret = fcntl(listen_fd_, F_SETFL, flags);
     if(ret < 0)
     {
           perror("fcntl");
-          exit(-1);
+          exit(1);
     }
 
     /* 绑定地址 */
@@ -100,28 +86,28 @@ bool ResterServer::Init()
     {
         perror("bind error");
         close(listen_fd_);
-        exit(-1);
+        exit(1);
     }
     /* 监听socket */
     if(listen(listen_fd_, max_connection_*max_thread_) < 0)
     {
         perror("listen error");
         close(listen_fd_);
-        exit(-1);
+        exit(1);
     }
 
     const int listen_n=1;//////////////////////////////////////////////////////////
     socklen_t cin_len = sizeof(struct sockaddr_in);
     epoll_event events[listen_n];
     epoll_event event;
-    memset(&cin, 0x00, sizeof(sockaddr_in));
+    memset(&c_addr, 0x00, sizeof(sockaddr_in));
     memset(events, 0x00, sizeof(epoll_event)*listen_n );
     memset(&event, 0x00, sizeof(epoll_event));
     epoll_fd_ = epoll_create(listen_n);
     if(epoll_fd_==-1)
     {
         perror("epoll_fd_");
-        exit(-1);
+        exit(1);
     }
 
     event.events = EPOLLIN|EPOLLET;
@@ -130,18 +116,14 @@ bool ResterServer::Init()
     if(ret==-1)
     {
         perror("epoll add");
-        exit(-1);
+        exit(1);
     }
-
-    while(true)
+    while(running_)
     {
         int nfds = epoll_wait(epoll_fd_, events, listen_n, 5);
-        //cout<<"server epoll go "<<nfds<<endl;
-
         if(nfds == -1 && errno == EINTR)
         {
-            exit(-99);
-            continue;
+            running_=false;
         }
         for(int i = 0; i < nfds; ++i)
         {
@@ -149,111 +131,29 @@ bool ResterServer::Init()
             {
                 while(true)
                 {
-                    int nfd = accept(listen_fd_,(struct sockaddr*)&cin,&cin_len);
+                    int nfd = accept(listen_fd_,(struct sockaddr*)&c_addr,&cin_len);
                     if(nfd == -1)
                     {
-                        printf("failed accept, error = %s\n", strerror(errno));
+                        //printf("failed accept, error = %s\n", strerror(errno));
                         //continue;
                         break;
                     }
-                    cout<<"new connection______________________________________________________"<<nfd<<endl;
                     connection_count++;
-                    cout<<"connection count "<<connection_count<<endl;
+                    LOG_INFO("new connection %s:%d",inet_ntoa(c_addr.sin_addr), ntohs(c_addr.sin_port))
                     auto connection=make_shared<Connection>(this);
-                    connection->connectioned_fd_ = nfd;
+                    connection->connected_fd_ = nfd;
                     connection->ip_ = ntohl(c_addr.sin_addr.s_addr);
                     connection->port_ = ntohs(c_addr.sin_port);
                     connection->is_on_ = false;
-                    //connection.on_get_=[](int fd){cout<<fd<<endl;};
                     epoll_event ev;
-                    ev.events = EPOLLIN|EPOLLET|EPOLLRDHUP|EPOLLOUT|EPOLLERR;
+                    ev.events = EPOLLIN|EPOLLET|EPOLLRDHUP|EPOLLERR;
                     ev.data.fd = nfd;
                     connection->event_=ev;
-                    on_connected(connection.get());
-
+                    on_connected(connection);
                     ConnectionThread* thread=thread_pool_.GetThread();
-//                thread->on_get_=[](int fd){
-//                char buf1[]="hhhhhh";
-//                //write(fd,buf1,10);
-//                //cout<<fd<<"00000000000000000000000000000"<<endl;
-//                };
                     connection->Init(thread);//connection detach  new connection go to connection thread;
-
-                    //getchar();
-                    //connections_.push_back(connection->GetShare());
-
-                    //event.events = EPOLLIN|EPOLLHUP|EPOLLET;
-                    //event.data.fd = nfd;
-                    //epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, nfd, &event);//加入监听连接队列
                 }
-
-
-
-//                char buf[1000];
-//                int s=0;
-//                bool link=recv_once(nfd,buf,s);
-//                close(nfd);
-//                continue;
-
-//                char buf[1000];
-//                int s=0;
-//                bool link=recv_once(nfd,buf,s);
-//                buf[s]='\0';
-//                cout<<buf<<endl;
-//                link=false;
-//                if(link)
-//                {
-//                    cout<<"+++++++++++++++++++++++++++++++++++\n";
-//
-//                    char tosend[]="HTTP/1.1 200 OK\r\n"
-//                                  "\r\n"
-//                                  "gggggggg";
-//
-//                    //usleep(100000);
-//                    ret=send(nfd,tosend,sizeof(tosend),0);
-//                    cout<<"send ret             "<<ret<<endl;
-//                    //usleep(10000);
-//                    if(ret<=0)
-//                    {
-//                        perror("send wrong\n");
-//                        //exit(-1);
-//                    }
-//                }
-//                else
-//                {
-//                    cout<<"-----------------------------------------\n";
-//                }
-//
-//                close(nfd);
-//                continue;
-
-//                //test
-//                //ret=recv(nfd,buf,1000,MSG_DONTWAIT);
-//                bool link=true;
-//                ret= recv_once(nfd,buf,link);
-//                if(!link)
-//                {
-//                    cout<<"not link "<<ret<<endl;
-//                    close(nfd);
-//                    continue;
-//                    //exit(89);
-//                }
-//                cout<<ret<<endl;
-//                ret=send(nfd,tosend,sizeof(tosend),MSG_DONTWAIT);
-//                if(ret<=0)
-//                {
-//                    perror("send wrong\n");
-//                    //exit(-1);
-//                }
-//                cout<<ret<<"send over\n";
-//                close(nfd);
-//                continue;
-
-
-
-
             }
-            //cout<<"hhhhhhhhhhhhhhh"<<endl;
         }
     }
 }

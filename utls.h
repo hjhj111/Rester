@@ -1,7 +1,7 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef UTLS_H
+#define UTLS_H
 #include<string>
-#include<iostream>
+//#include<iostream>
 #include<fstream>
 #include<filesystem>
 #include<functional>
@@ -24,6 +24,7 @@
 #include "rapidjson/filereadstream.h"
 
 #include "TimeCount.h"
+#include "log/log.h"
 
 using namespace std;
 using namespace rapidjson;
@@ -112,7 +113,8 @@ inline ostream& operator <<(ostream& os, const Config& config)
 
 //extern Config config;
 class Connection;
-using ConnectCallBack=function<void(Connection*)>;
+using ConnectionPtr=shared_ptr<Connection>;
+using ConnectCallBack=function<void(ConnectionPtr)>;
 using GetCallBack=function<void(int)>;
 using PostCallBack=function<void(int)>;
 using CloseCallBack=function<void(int)>;
@@ -126,20 +128,17 @@ inline bool recv_once(int fd,char buf[],int& size_read)
 {
     size_read=0;
     int ind=0;
-    int try_n=0;
+    int n_try=0;
     bool re=true;
     //link=true;
     while (true)
     {
-        try_n++;
+        n_try++;
         int ret = recv(fd,buf+ind,buf_size-ind,MSG_DONTWAIT);
-        //ret = recv(fd,buf+ind,buf_size-ind,MSG_DONTWAIT);
-        //return false;
-        cout<<ret<<endl;
+
         if (ret==-1)
         {
-            printf("%s\n", strerror(errno));
-            //break;
+            //printf("%s\n", strerror(errno));
             if (size_read>0)// //(errno == EAGAIN||errno == EWOULDBLOCK)
             {
                 break;
@@ -158,10 +157,8 @@ inline bool recv_once(int fd,char buf[],int& size_read)
         else
         {
             size_read+=ret;
-            //break;
         }
     }
-    cout<<"try_n        "<<try_n<<endl;
     return re;
 }
 
@@ -173,6 +170,9 @@ inline int get_id()
     return ha(time_ms);
 }
 
+/*exit code 1 listen fd error
+ * 2 client fd error
+ * 3 listen fd epoll error
+ * */
 
-
-#endif // CONFIG_H
+#endif // UTLS_H
