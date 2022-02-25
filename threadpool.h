@@ -10,7 +10,8 @@ using namespace std;
 class ThreadPool
 {
 public:
-    ThreadPool()
+    ThreadPool(ResterServer* server)
+    :server_(server)
     {
 
     }
@@ -28,6 +29,7 @@ public:
     ConnectionThread* GetThread();
 
 private:
+    ResterServer* server_;
     int max_thread_;
     int max_connection_;
     vector<ConnectionThread*> threads_;

@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.21)
 project(Rester)
 
-set(DCMAKE_BUILD_TYPE,“Debug”)
+set(DCMAKE_BUILD_TYPE,“Relesse”)
 
 # 查找指定目录下的所有.cpp与.h文件 并存放到指定变量名SC_FILES中
-FILE(GLOB SC_FILES "*.cpp" "*.h" "log/*.cpp" "log/*.h")
+FILE(GLOB SC_FILES "*.cpp" "*.h" "log/*.cpp" "log/*.h" "http-parser/*.h" "http-parser/*.c")
 #FILE(GLOB SC_FILES "log/*.cpp" "log/*.h")
 
 set(CMAKE_CXX_STANDARD 14)

@@ -80,9 +80,9 @@ public:
     int sent_size_=0;
     bool read=false;
     //callback
-    ConnectCallBack on_connect_;
-    WriteCallBack  on_write_;
-    GetCallBack on_get_;
+    PostCallBack  on_post_;
+    GetCallBack  on_get_;
+    WriteCallBack on_write_;// get/post
 };
 
 using ConnectionPtr=std::shared_ptr<Connection>;

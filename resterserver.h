@@ -14,10 +14,12 @@
 #include<functional>
 #include <list>
 
-#include "http-parser/http_parser.h"
+//#include "http-parser/http_parser.h"
 
 //#include "utls.h"
 #include "threadpool.h"
+#include "UrlWorker.h"
+//class UrlWorker;
 using namespace std;
 
 class ResterServer
@@ -28,16 +30,14 @@ public:
 
     void Init();
 
-    GetCallBack on_get_;
+    void AddWorker(const UrlWorker& worker);
 
-    PostCallBack on_post_;
-
-    WriteCallBack on_write_;
+    ReadCallBack on_read_;
 
     ConnectCallBack  on_connect_;
 
 public:
-    ThreadPool thread_pool_;
+    ThreadPool* thread_pool_;
     //ThreadPool a;
     atomic<bool> running_{true};
     int listen_fd_;
@@ -47,7 +47,7 @@ public:
 
 private:
     list<shared_ptr<Connection>> connections_;
-
+    unordered_map<string,UrlWorker> url_worker_;
 };
 
 #endif // RESTERSERVER_H

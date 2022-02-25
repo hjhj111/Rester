@@ -21,10 +21,9 @@ using ConnectionFunc=function<void(shared_ptr<Connection>conn)>;
 class ConnectionThread
 {
 public:
-    ConnectionThread()
-    {
+    ConnectionThread()=delete;
 
-    };
+    ConnectionThread(ResterServer* server,int max_connection);
     ~ConnectionThread()
     {
         running_= false;
@@ -34,11 +33,11 @@ public:
         connection_thread_.join();
     }
 
-    ConnectionThread(int max_connection);
     void Init();
     void AddConnection(ConnectionPtr conn);
     void DeleteConnection(ConnectionPtr conn);
 
+    ResterServer* server_;
     thread connection_thread_;
     atomic<bool> running_{true};
 

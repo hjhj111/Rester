@@ -13,8 +13,11 @@
 
 #include <algorithm>
 
-ConnectionThread::ConnectionThread(int max_connection):
-    max_connection_(max_connection)
+#include "resterserver.h"
+
+ConnectionThread::ConnectionThread(ResterServer* server, int max_connection):
+    max_connection_(max_connection),
+    server_(server)
 {
 
 }
@@ -108,8 +111,11 @@ void ConnectionThread::Init()
                     //on_get_(events[i].data.fd);
                     auto conn=fds_connections_.at(events[i].data.fd);
 
-                    conn->on_get_(conn);
-                    //printf("stop\n");
+                    //printf("connection info%d",conn->connected_fd_);
+                    server_->on_read_(conn);
+
+
+
                     //on_get_(conn);
                     //sleep(100);
                     //if(fds_connections_.find(events[i].data.fd)!=fds_connections_.end())
@@ -142,7 +148,7 @@ void ConnectionThread::Init()
                 if(events[i].events & EPOLLRDHUP)
                 {
                     auto conn=fds_connections_.at(events[i].data.fd);
-                    //conn->Close();
+                    conn->Close();
                     exit(8);
                 }
                 if(events[i].events & EPOLLERR)

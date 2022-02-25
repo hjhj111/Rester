@@ -37,7 +37,6 @@ void Connection::Close()
 {
 
     thread_->DeleteConnection(ConnectionPtr(this) );
-
 }
 
 void Connection::Init(ConnectionThread* thread)

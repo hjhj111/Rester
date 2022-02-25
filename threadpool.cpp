@@ -7,7 +7,7 @@ void ThreadPool::Init(int max_thread, int max_connection)
     max_connection_=max_connection;
     for(int i=0;i<max_thread;i++)
     {
-        auto th=new ConnectionThread(max_connection_);
+        auto th=new ConnectionThread(server_,max_connection_);
         th->Init();
         threads_.push_back(th);
     }
