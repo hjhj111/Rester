@@ -10,34 +10,102 @@ ResterServer::ResterServer(const Config& config)
     :max_connection_(config.max_connection),
       max_thread_(config.max_thread)
 {
-    on_connected=[](ConnectionPtr conn)
+    on_connect_=[](ConnectionPtr conn)
     {
-        //printf("on connected\n");
+        printf("on connected\n");
     };
-    on_get=[](int fd)
+    on_get_=[](ConnectionPtr conn)
     {
-        request_count++;
-        char buf[1000];
-        char tosend[]="HTTP/1.1 200 OK\r\n"
-                      "\r\n"
-                      "Hello Rester";
+        printf("on get\n");
+        int fd=conn->connected_fd_;
         int size_read=0;
         bool link=true;
+        char buf[1000];
+
         link= recv_once(fd,buf,size_read);
         //int ret= recv(fd,buf,1000,0);
         if(!link||size_read==0)
         {
-            return;
+            printf("recv once %d %d \n",link,size_read);
+            conn->Close();
         }
-        int ret=send(fd,tosend,sizeof(tosend),MSG_DONTWAIT);
-        if(ret<=0)
+        else
         {
-            perror("send wrong\n");
-            LOG_ERROR("send wrong int on_get");
+            conn->read=true;
+        }
+    };
+    on_write_=[](ConnectionPtr conn)
+    {
+        printf("on write\n");
+        int fd=conn->connected_fd_;
+        int& response_size=conn->buf_size_;
+        char* & response_buf=conn->buf_;
+        int& sent_size=conn->sent_size_;
+        request_count++;
+        char head[]="HTTP/1.1 200 OK\r\n"
+                    //"Transfer-Encoding: chunked\r\n"//Content-Type: text/html  Transfer-Encoding: chunked
+                    //"Content-Type: text/html\r\n"
+                    "Content-Type: application/x-zip-compressed\r\n"
+                    "Connection: keep-alive\r\n"
+                    "Keep-Alive: timeout=1000\r\n"
+                    "Content-Length: 15204315\r\n"
+                    "\r\n";
+          int length;
+//        tie(length, response_size)= get_file_chunk("index.zip", response_buf,
+//                                                   head, sizeof(head));
+//        if(response_size <= length)
+//        {
+//            printf("read file error %d", response_size);
+//            exit(6);
+//        }
+//        printf("read file  %d %d\n", length, response_size);
+//        print_raw(response_buf,response_size);
+
+        printf("sent_size%d\n",sent_size);
+        if(sent_size==0)
+        {
+            char* buf2="";
+            length= read_file_all("file.zip",buf2);
+            response_size=length+sizeof(head);
+            response_buf=new char[response_size];
+            snprintf(response_buf,response_size,"%s%s",head,buf2);
+            printf("read file all %d\n",length);
+        }
+        if(sent_size>response_size)
+        {
+            //sent_size=0;
+            printf("sent size %d\n",sent_size);
+            exit(11);
+        }
+        else if(sent_size==response_size)
+        {
+            conn->Close();
+        }
+        //sent_size=0;
+        while(sent_size < response_size)
+        {
+            int left=response_size-sent_size;
+            if(left>chunk_size)
+            {
+                left=chunk_size;
+            }
+            int ret=send(fd, response_buf+sent_size, left, MSG_DONTWAIT);
+            if(ret<=0)
+            {
+                break;
+                perror("send wrong\n");
+                //LOG_ERROR("send wrong int on_get");
+            }
+            else
+            {
+                sent_size+=ret;
+            }
+            //printf("send %d\n",ret);
+
         }
     };
     thread_pool_=ThreadPool();
-    thread_pool_.Init(max_thread_,max_connection_,on_get);
+    thread_pool_.Init(max_thread_,max_connection_);
 }
 
 void ResterServer::Init()
@@ -120,6 +188,7 @@ void ResterServer::Init()
     }
     while(running_)
     {
+
         int nfds = epoll_wait(epoll_fd_, events, listen_n, 5);
         if(nfds == -1 && errno == EINTR)
         {
@@ -127,6 +196,7 @@ void ResterServer::Init()
         }
         for(int i = 0; i < nfds; ++i)
         {
+            //printf("hhhhhhhhhhhhhhhh");
             if(events[i].data.fd == listen_fd_)  //监听新连接
             {
                 while(true)
@@ -139,17 +209,21 @@ void ResterServer::Init()
                         break;
                     }
                     connection_count++;
+
                     LOG_INFO("new connection %s:%d",inet_ntoa(c_addr.sin_addr), ntohs(c_addr.sin_port))
                     auto connection=make_shared<Connection>(this);
                     connection->connected_fd_ = nfd;
                     connection->ip_ = ntohl(c_addr.sin_addr.s_addr);
                     connection->port_ = ntohs(c_addr.sin_port);
                     connection->is_on_ = false;
+                    connection->on_connect_=on_connect_;
+                    connection->on_get_=on_get_;
+                    connection->on_write_=on_write_;
                     epoll_event ev;
-                    ev.events = EPOLLIN|EPOLLET|EPOLLRDHUP|EPOLLERR;
+                    ev.events = EPOLLIN|EPOLLET|EPOLLRDHUP|EPOLLERR|EPOLLOUT;
                     ev.data.fd = nfd;
                     connection->event_=ev;
-                    on_connected(connection);
+                    connection->on_connect_(connection);
                     ConnectionThread* thread=thread_pool_.GetThread();
                     connection->Init(thread);//connection detach  new connection go to connection thread;
                 }

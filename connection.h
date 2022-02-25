@@ -17,6 +17,7 @@
 #include <memory>
 
 #include "utls.h"
+//#include "connectionthread.h"
 
 class ResterServer;
 
@@ -40,9 +41,10 @@ public:
     ~Connection()
     {
 
-        //printf("close fd\n");
+        printf("close fd\n");
         close(connected_fd_);
-        //printf("close fd over\n");
+        delete buf_;
+        printf("close fd over\n");
     }
 
     shared_ptr<Connection> GetShare()
@@ -60,6 +62,9 @@ public:
 
     bool operator==(const Connection& other);
 
+    void Close();
+
+
 public:
     unsigned long ip_;          //client ip
     unsigned short int port_;   //client port
@@ -69,6 +74,15 @@ public:
     ConnectionThread* thread_;
     epoll_event event_;
     ConnectionState state_;
+    //file
+    char* buf_;
+    int buf_size_;
+    int sent_size_=0;
+    bool read=false;
+    //callback
+    ConnectCallBack on_connect_;
+    WriteCallBack  on_write_;
+    GetCallBack on_get_;
 };
 
 using ConnectionPtr=std::shared_ptr<Connection>;

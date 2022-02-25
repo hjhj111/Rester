@@ -7,6 +7,8 @@ using namespace std;
 
 //#define MYTEST
 
+
+
 int main(int argc, char *argv[])
 {
 #ifdef MYTEST
@@ -18,11 +20,11 @@ int main(int argc, char *argv[])
     cout<<config;
 
     ResterServer server(config);
-    if(!Log::get_instance()->init("",0))
+    if(!Log::get_instance()->init("log",0,8192,5000000,0))
     {
-        return 11;
+        return 4;
     }
-
+    printf("log inited\n");
     server.Init();
     return 0;
 }

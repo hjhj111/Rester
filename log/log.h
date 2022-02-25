@@ -32,20 +32,31 @@ public:
 
     void flush(void);
 
+
 private:
     Log();
     virtual ~Log();
-    void async_write_log()
+
+public:
+    void *async_write_log()
     {
+        //printf("hhhhhhhhhhhhhhhh");
         string single_log;
         //从阻塞队列中取出一个日志string，写入文件
-        while (m_log_queue->pop(single_log))
+        while (true)
         {
-            m_mutex.lock();
-            fputs(single_log.c_str(), m_fp);
-            m_mutex.unlock();
+            auto ret=m_log_queue->pop(single_log);
+            if(ret)
+            {
+                m_mutex.lock();
+                fputs(single_log.c_str(), m_fp);
+                m_mutex.unlock();
+            }
         }
     }
+
+public:
+    bool m_is_async;                  //是否同步标志位
 
 private:
     char dir_name[128]; //路径名
@@ -57,7 +68,7 @@ private:
     FILE *m_fp;         //打开log的文件指针
     char *m_buf;
     block_queue<string> *m_log_queue; //阻塞队列
-    bool m_is_async;                  //是否同步标志位
+
     locker m_mutex;
 public:
     int m_close_log; //关闭日志

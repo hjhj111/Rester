@@ -28,9 +28,13 @@ public:
 
     void Init();
 
-    GetCallBack on_get;
+    GetCallBack on_get_;
 
-    PostCallBack on_post;
+    PostCallBack on_post_;
+
+    WriteCallBack on_write_;
+
+    ConnectCallBack  on_connect_;
 
 public:
     ThreadPool thread_pool_;
@@ -42,7 +46,6 @@ public:
     int max_thread_;
 
 private:
-    ConnectCallBack on_connected;
     list<shared_ptr<Connection>> connections_;
 
 };

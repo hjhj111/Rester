@@ -34,7 +34,7 @@ public:
         connection_thread_.join();
     }
 
-    ConnectionThread(int max_connection,GetCallBack on_get);
+    ConnectionThread(int max_connection);
     void Init();
     void AddConnection(ConnectionPtr conn);
     void DeleteConnection(ConnectionPtr conn);
@@ -54,8 +54,8 @@ public:
 
     int epoll_fd_;
 
-    GetCallBack on_get_;
-    CloseCallBack on_close_;
+    //GetCallBack on_get_;
+    //CloseCallBack on_close_;
 
     vector<ConnectionFunc> connection_funcs;
 };

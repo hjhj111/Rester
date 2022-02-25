@@ -13,9 +13,8 @@
 
 #include <algorithm>
 
-ConnectionThread::ConnectionThread(int max_connection,GetCallBack on_get):
-    max_connection_(max_connection),
-    on_get_(on_get)
+ConnectionThread::ConnectionThread(int max_connection):
+    max_connection_(max_connection)
 {
 
 }
@@ -31,12 +30,15 @@ void ConnectionThread::Init()
         {
             //printf("connection thread running\n");
             list<ConnectionPtr> connections_removed;
-            if(!connections_removed_.empty())
+            lock_guard<mutex> guard(mutex_removed_);
             {
-                lock_guard<mutex> guard(mutex_removed_);
+                //printf("ttttttttttttttt\n");
+                if (!connections_removed_.empty())
                 {
+
                     connections_removed.swap(connections_removed_);
                     connections_removed_.clear();
+
                 }
             }
             for(auto conn:connections_removed)
@@ -45,7 +47,8 @@ void ConnectionThread::Init()
                 if(ret<0)
                 {
                     perror("epoll remove wrong\n");
-                    exit(-1);
+                    continue;
+                    //exit(-1);
                 }
                 connections_.remove(conn);
             }
@@ -102,13 +105,50 @@ void ConnectionThread::Init()
             {
                 if(events[i].events & EPOLLIN)//read,client close or down
                 {
-                    on_get_(events[i].data.fd);
+                    //on_get_(events[i].data.fd);
+                    auto conn=fds_connections_.at(events[i].data.fd);
+
+                    conn->on_get_(conn);
+                    //printf("stop\n");
+                    //on_get_(conn);
+                    //sleep(100);
                     //if(fds_connections_.find(events[i].data.fd)!=fds_connections_.end())
                     //{
-                    DeleteConnection(fds_connections_[events[i].data.fd]);
+                    //DeleteConnection(fds_connections_[events[i].data.fd]);
                     //}
                 }
+                if(events[i].events & EPOLLOUT)//connected
+                {
+//                    int ret=send(events[i].data.fd,buf_,chunk_size,MSG_DONTWAIT);
+//                    if(ret<=0)
+//                    {
+//                        perror("send wrong\n");
+//                        LOG_ERROR("send wrong int on_get");
+//                    }
+                    //printf("send %d\n",ret);
+                    auto conn=fds_connections_.at(events[i].data.fd);
+                    //on_get_(conn);
+                    if(conn->read==false)
+                    {
+                        continue;
+                    }
 
+                    conn->on_write_(conn);
+                    //sleep(5);
+                    //DeleteConnection(fds_connections_[events[i].data.fd]);
+                    //exit(10);
+                    //exit(7);
+                }
+                if(events[i].events & EPOLLRDHUP)
+                {
+                    auto conn=fds_connections_.at(events[i].data.fd);
+                    //conn->Close();
+                    exit(8);
+                }
+                if(events[i].events & EPOLLERR)
+                {
+                    exit(9);
+                }
             }
 
         }
@@ -127,15 +167,10 @@ void ConnectionThread::AddConnection(ConnectionPtr conn)
 
 void ConnectionThread::DeleteConnection(ConnectionPtr conn)
 {
-    lock_guard<mutex> guard(mutex_removed_);
-    {
-//        if(std::find(connections_.begin(), connections_.end(),conn)!=connections_.end())
-//        {
-            connections_removed_.push_back(conn);
-//          fds_connections_.remove(conn.connectioned_fd_);
+        connections_removed_.push_back(conn);
+            lock_guard<mutex> guard(mutex_removed_);
+        {
             fds_connections_.erase(fds_connections_.find(conn->connected_fd_));
-
-//        }
-    }
+        }
 }
 

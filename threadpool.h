@@ -23,7 +23,7 @@ public:
         }
     }
 
-    void Init(int max_thread,int max_connection,GetCallBack on_get);
+    void Init(int max_thread,int max_connection);
 
     ConnectionThread* GetThread();
 

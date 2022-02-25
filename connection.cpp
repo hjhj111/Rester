@@ -33,9 +33,17 @@ Connection &Connection::operator=(const Connection &connection)
     return *this;
 }
 
+void Connection::Close()
+{
+
+    thread_->DeleteConnection(ConnectionPtr(this) );
+
+}
+
 void Connection::Init(ConnectionThread* thread)
 {
     thread->AddConnection(GetShare());
+    thread_=thread;
 }
 
 bool Connection::operator==(const Connection &other)

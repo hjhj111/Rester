@@ -54,7 +54,6 @@ public:
         m_mutex.lock();
         if (m_size >= m_max_size)
         {
-
             m_mutex.unlock();
             return true;
         }

@@ -42,7 +42,7 @@ bool Log::init(const char *file_name, int close_log, int log_buf_size, int split
     struct tm *sys_tm = localtime(&t);
     struct tm my_tm = *sys_tm;
     m_today = my_tm.tm_mday;
-
+    //stdout
     if(file_name== nullptr||*file_name=='\0')
     {
         m_fp=stdout;
@@ -61,15 +61,11 @@ bool Log::init(const char *file_name, int close_log, int log_buf_size, int split
         strncpy(dir_name, file_name, p - file_name + 1);
         snprintf(log_full_name, 255, "%s%d_%02d_%02d_%s", dir_name, my_tm.tm_year + 1900, my_tm.tm_mon + 1, my_tm.tm_mday, log_name);
     }
-
-
-    
     m_fp = fopen(log_full_name, "a");
     if (m_fp == NULL)
     {
         return false;
     }
-
     return true;
 }
 
@@ -99,13 +95,13 @@ void Log::write_log(int level, const char *format, ...)
         strcpy(s, "[debug]:");
         break;
     }
+
     //写入一个log，对m_count++, m_split_lines最大行数
     m_mutex.lock();
     m_count++;
 
     if (m_today != my_tm.tm_mday || m_count % m_split_lines == 0) //everyday log
     {
-        
         char new_log[256] = {0};
         fflush(m_fp);
         fclose(m_fp);
@@ -125,7 +121,7 @@ void Log::write_log(int level, const char *format, ...)
         }
         m_fp = fopen(new_log, "a");
     }
- 
+
     m_mutex.unlock();
 
     va_list valst;
@@ -145,10 +141,15 @@ void Log::write_log(int level, const char *format, ...)
     log_str = m_buf;
 
     m_mutex.unlock();
-
-    if (m_is_async && !m_log_queue->full())
+    //printf(log_str.c_str());
+    if (m_is_async)
     {
-        m_log_queue->push(log_str);
+        int ret=m_log_queue->push(log_str);
+        if(!ret)
+        {
+            exit(5);
+        }
+
     }
     else
     {
@@ -163,7 +164,6 @@ void Log::write_log(int level, const char *format, ...)
         }
         //flush();
     }
-
     va_end(valst);
 }
 
