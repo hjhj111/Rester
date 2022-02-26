@@ -4,7 +4,10 @@
 Connection::Connection(ResterServer* server)
     :server_(server)
 {
-
+    on_write_=[](ConnectionPtr conn)
+    {
+        printf("null on_write triggered\n");
+    };
 }
 
 Connection::Connection(const Connection &connection)
@@ -35,14 +38,15 @@ Connection &Connection::operator=(const Connection &connection)
 
 void Connection::Close()
 {
-
-    thread_->DeleteConnection(ConnectionPtr(this) );
+    printf(" close\n");
+    thread_->DeleteConnection(GetShare() );
 }
 
 void Connection::Init(ConnectionThread* thread)
 {
-    thread->AddConnection(GetShare());
     thread_=thread;
+    thread->AddConnection(GetShare());
+
 }
 
 bool Connection::operator==(const Connection &other)

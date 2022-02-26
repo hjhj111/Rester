@@ -47,7 +47,7 @@ public:
 
 private:
     list<shared_ptr<Connection>> connections_;
-    unordered_map<string,UrlWorker> url_worker_;
+    unordered_map<string,UrlWorker> url_workers_;
 };
 
 #endif // RESTERSERVER_H

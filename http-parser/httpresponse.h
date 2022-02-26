@@ -138,9 +138,9 @@ public:
             auto ch = m_buf[i];
             if (ch == '\r')
             {
-                printf("\\r\\n%s", "\r\n");
+                printf("\\r\\n\n");
             }
-            if (ch == '\n')
+            else if (ch == '\n')
             {
 
             }

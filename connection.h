@@ -43,7 +43,10 @@ public:
 
         printf("close fd\n");
         close(connected_fd_);
-        delete buf_;
+        if(buf_size_>0)
+        {
+            delete buf_;
+        }
         printf("close fd over\n");
     }
 
@@ -51,6 +54,8 @@ public:
     {
         return shared_from_this();
     }
+
+
 
     Connection(ResterServer* server);
 
@@ -68,7 +73,7 @@ public:
 public:
     unsigned long ip_;          //client ip
     unsigned short int port_;   //client port
-    int connected_fd_;                   //connect socket
+    int connected_fd_;          //connect socket
     bool is_on_;                //network switch
     ResterServer* server_;
     ConnectionThread* thread_;
@@ -76,7 +81,7 @@ public:
     ConnectionState state_;
     //file
     char* buf_;
-    int buf_size_;
+    int buf_size_=0;//must be initialized
     int sent_size_=0;
     bool read=false;
     //callback
