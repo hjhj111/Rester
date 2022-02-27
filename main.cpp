@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 
     ResterServer server(config);
 
-    if(!Log::get_instance()->init("log",0,8192,5000000,500))
+    if(!Log::get_instance()->init("log",1,8192,5000000,50000))
     {
         return 4;
     }

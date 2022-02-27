@@ -8,10 +8,14 @@
 #include <string>
 using namespace  std;
 
+#include "cpp_redis/cpp_redis"
+
 #include "utls.h"
 #include "connectionthread.h"
 #include "connection.h"
 #include "http-parser/httpresponse.h"
+
+//#pragma comment(lib,"libcpp_redis.a" "libtacopie.a")
 
 class UrlWorker
 {
@@ -21,9 +25,22 @@ public:
     {
         on_get_ = [](RequestPtr request_ptr,ResponsePtr response_ptr)
         {
-            //int &response_size = conn->buf_size_;
-            //char *& response_buf = conn->buf_;
-            //ResponsePtr response_ptr= make_shared<Response>();
+//            cpp_redis::client client;
+//            client.connect("115.156.245.91",6379,
+//                           [](const std::string& host, std::size_t port, cpp_redis::client::connect_state status) {
+//                if (status == cpp_redis::client::connect_state::ok) {
+//                    std::cout << "client connected to " << host << ":" << port << std::endl;
+//                }
+//            });
+//            cpp_redis::reply reply1;
+//            client.get("hello", [&reply1](cpp_redis::reply& reply) {
+//                reply1=reply;
+//                std::cout << "get hello: " << reply << std::endl;
+//                //exit(78);
+//            });
+//            client.sync_commit();
+            //std::cout << "get hello: " << reply1 << std::endl;
+            //printf("%s\n",reply1.as_string().c_str());
             response_ptr->setStatusCode(200);
             response_ptr->setHeader("Content-Type", "application/x-zip-compressed");
             response_ptr->setHeader("Connection", "keep-alive");
@@ -32,18 +49,9 @@ public:
 
             response_ptr->printResponse();
             char *buf2 = nullptr;
-            int length = read_file_all("file.zip", buf2);
+            int length = read_file_all("index.html", buf2);
             response_ptr->setData(buf2, length);
             response_ptr->combineResponse();
-            //auto head= response.getHead();//attention straight return c_str() will get nothing
-            // because const right string will be deleted right soon
-            //auto head_len= response.getHeadLen();
-
-            //response_size=response_ptr->getResponseLen();
-            //response_buf=response_ptr->getResponse();
-
-            //response_buf=head.c_str();
-//            int ret=snprintf(response_buf, response_size, "%s%s", head.c_str(), buf2);
             printf("read file all %s %d %d \n", response_ptr->getHead().c_str(),length,response_ptr->m_response_len);
         };
 

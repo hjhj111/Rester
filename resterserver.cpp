@@ -28,7 +28,7 @@ ResterServer::ResterServer(const Config& config)
 
         link= recv_once(fd,buf,size_read);
         //int ret= recv(fd,buf,1000,0);
-        if(!link||size_read==0)
+        if(!link&&size_read==0)
         {
             printf("recv once %d %d \n",link,size_read);
             conn->Close();
@@ -105,6 +105,7 @@ ResterServer::ResterServer(const Config& config)
         else if (sent_size == response_size)
         {
             conn->Close();
+            return;
         }
         //sent_size=0;
         while (sent_size < response_size)

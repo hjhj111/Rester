@@ -47,11 +47,14 @@ void ConnectionThread::Init()
                 ret=epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, conn->connected_fd_ , &conn->event_);
                 if(ret<0)
                 {
-                    perror("epoll remove wrong\n");
+                    //perror("epoll remove wrong\n");
                     continue;
                     exit(12);
                 }
-                connections_.remove(conn);
+                if(std::find(connections_.begin(), connections_.end(), conn)!=connections_.end())
+                {
+                    connections_.remove(conn);
+                }
             }
             //add new connection
             list<ConnectionPtr> connections_new;
@@ -104,12 +107,12 @@ void ConnectionThread::Init()
             {
                 if(events[i].events & EPOLLIN)//read,client close or down
                 {
-//                    if(fds_connections_.find(events[i].data.fd)!=fds_connections_.end())
-//                    {
+                    if(fds_connections_.find(events[i].data.fd)!=fds_connections_.end())
+                    {
                         auto conn = fds_connections_.at(events[i].data.fd);
                         //printf("connection info%d",conn->connected_fd_);
                         server_->on_read_(conn);
-//                    }
+                    }
                 }
                 if(events[i].events & EPOLLOUT)  //connected also trigger
                 {
@@ -154,14 +157,15 @@ void ConnectionThread::AddConnection(ConnectionPtr conn)
 
 void ConnectionThread::DeleteConnection(ConnectionPtr conn)
 {
+    //return;
     //printf(" delete\n");
     {
         lock_guard<mutex> guard(mutex_removed_);
         connections_removed_.push_back(conn);
-//        if(fds_connections_.find(conn->connected_fd_)!=fds_connections_.end())
-//        {
+        if(fds_connections_.find(conn->connected_fd_)!=fds_connections_.end())
+        {
             fds_connections_.erase(fds_connections_.find(conn->connected_fd_));
-//        }
+        }
     }
     //printf(" delete\n");
 }
