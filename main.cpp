@@ -7,8 +7,6 @@ using namespace std;
 
 #define MYTEST
 
-
-
 int main(int argc, char *argv[])
 {
 #ifdef MYTEST

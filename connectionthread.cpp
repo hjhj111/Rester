@@ -118,7 +118,7 @@ void ConnectionThread::Init()
                         auto conn=fds_connections_.at(events[i].data.fd);
                         if(conn->read)
                         {
-                            conn->on_write_(conn);
+                            server_->on_write_(conn);
                         }
                     }
                     //exit(7);

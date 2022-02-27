@@ -27,6 +27,8 @@
 
 #include "TimeCount.h"
 #include "log/log.h"
+#include "http-parser/HttpParser.h"
+#include "http-parser/httpresponse.h"
 
 using namespace std;
 using namespace rapidjson;
@@ -117,9 +119,9 @@ inline ostream& operator <<(ostream& os, const Config& config)
 class Connection;
 using ConnectionPtr=shared_ptr<Connection>;
 using ConnectCallBack=function<void(ConnectionPtr)>;
-using GetCallBack=function<void(ConnectionPtr)>;
+using GetCallBack=function<void(RequestPtr,ResponsePtr)>;
 using WriteCallBack=function<void(ConnectionPtr)>;
-using PostCallBack=function<void(ConnectionPtr)>;
+using PostCallBack=function<void(RequestPtr,ResponsePtr)>;
 using CloseCallBack=function<void(ConnectionPtr)>;
 using ReadCallBack=function<void(ConnectionPtr)>;
 

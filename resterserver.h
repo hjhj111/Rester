@@ -32,10 +32,6 @@ public:
 
     void AddWorker(const UrlWorker& worker);
 
-    ReadCallBack on_read_;
-
-    ConnectCallBack  on_connect_;
-
 public:
     ThreadPool* thread_pool_;
     //ThreadPool a;
@@ -45,6 +41,9 @@ public:
     int max_connection_;
     int max_thread_;
 
+    ReadCallBack on_read_;
+    ConnectCallBack  on_connect_;
+    WriteCallBack  on_write_;
 private:
     list<shared_ptr<Connection>> connections_;
     unordered_map<string,UrlWorker> url_workers_;

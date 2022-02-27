@@ -36,6 +36,7 @@ public:
     Connection()
     {
         //fd_id= get_id();
+        response_ptr_= make_shared<Response>();
     }
 
     ~Connection()
@@ -43,10 +44,10 @@ public:
 
         printf("close fd\n");
         close(connected_fd_);
-        if(buf_size_>0)
-        {
-            delete buf_;
-        }
+//        if(buf_size_>0)
+//        {
+//            delete buf_;
+//        }
         printf("close fd over\n");
     }
 
@@ -59,9 +60,9 @@ public:
 
     Connection(ResterServer* server);
 
-    Connection(const Connection& connection);
-
-    Connection& operator=(const Connection& connection);
+//    Connection(const Connection& connection);
+//
+//    Connection& operator=(const Connection& connection);
 
     void Init(ConnectionThread* thread);
 
@@ -79,15 +80,16 @@ public:
     ConnectionThread* thread_;
     epoll_event event_;
     ConnectionState state_;
-    //file
-    char* buf_;
-    int buf_size_=0;//must be initialized
+
     int sent_size_=0;
     bool read=false;
     //callback
     PostCallBack  on_post_;
     GetCallBack  on_get_;
-    WriteCallBack on_write_;// get/post
+    GetCallBack on_write_;// get/post
+
+    RequestPtr request_ptr_;
+    ResponsePtr response_ptr_;
 };
 
 using ConnectionPtr=std::shared_ptr<Connection>;

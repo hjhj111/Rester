@@ -1,3 +1,4 @@
+#pragma once
 #include <string>
 #include <map>
 #include <sstream>
@@ -9,7 +10,10 @@ private:
     std::string format_key(std::string &str);
 public:
     HttpParser(char *buf);
-    ~HttpParser();
+    ~HttpParser()
+    {
+
+    }
     void show();
     std::string operator[](std::string str);
 
@@ -37,7 +41,9 @@ private:
     }
 };
 
-HttpParser::HttpParser(char *msg){
+using RequestPtr=shared_ptr<HttpParser>;
+
+inline HttpParser::HttpParser(char* msg){
     std::string buf(msg);
     std::istringstream buf_stream(buf);
     enum parts{
@@ -113,9 +119,9 @@ HttpParser::HttpParser(char *msg){
     http.insert(std::make_pair("body", body_string));
 }
 
-HttpParser::~HttpParser(){}
+//HttpParser::~HttpParser(){}
 
-void HttpParser::show(){
+inline void HttpParser::show(){
     printf("Request parser result:-----------------\n");
     for(auto it = http.cbegin(); it != http.cend(); ++it){
         //std::cout << it->first << ": " << it->second << std::endl;
@@ -125,13 +131,13 @@ void HttpParser::show(){
 
 }
 
-std::string HttpParser::operator[](std::string str){
+inline std::string HttpParser::operator[](std::string str){
     //auto it = http.find(format_key(str));
     auto it = http.find(str);
     return it != http.end() ? it->second : "";
 }
 
-std::string HttpParser::format_key(std::string &str){
+inline std::string HttpParser::format_key(std::string &str){
     if(str[0] >= 'a' && str[0] <= 'z'){
         str[0] = str[0] + 'A' - 'a';
     }
@@ -144,3 +150,4 @@ std::string HttpParser::format_key(std::string &str){
     }
     return str;
 }
+

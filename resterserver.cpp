@@ -37,22 +37,22 @@ ResterServer::ResterServer(const Config& config)
         {
             printf("%s",buf);
             LOG_INFO(buf);
-            HttpParser parser(buf);
-
+            conn->request_ptr_=make_shared<HttpParser>(buf);
+            auto request_ptr=conn->request_ptr_;
 //            parser.show();
 //            printf("key1: %s  key2: %s\n",parser.GetUrlParameter("key1").c_str(),
 //                   parser.GetUrlParameter("key2").c_str());
 //            fflush(stdout);
-            auto url=parser["url"];
+            auto url=(*request_ptr)["url"];
             auto& url_workers=conn->server_->url_workers_;
             if(true||url_workers.find(url) != url_workers.end())
             {
-                if(true||parser["method"]=="GET")
+                if(true || (*request_ptr)["method"] == "GET")
                 {
                     printf("distribute get\n");
                     conn->on_write_=url_workers.at("/").on_get_;
                 }
-                else if(parser["method"]=="POST")
+                else if((*request_ptr)["method"] == "POST")
                 {
                     conn->on_write_=url_workers.at(url).on_post_;
                 }
@@ -69,6 +69,82 @@ ResterServer::ResterServer(const Config& config)
         }
     };
 
+    on_write_=[](ConnectionPtr conn)
+    {
+        printf("on write\n");
+        int fd = conn->connected_fd_;
+
+        volatile int &response_size = conn->response_ptr_->m_response_len;
+        char *& response_buf = conn->response_ptr_->m_response;
+        int &sent_size = conn->sent_size_;
+        request_count++;
+
+    //            char head[] = "HTTP/1.1 200 OK\r\n"
+    //                          //"Transfer-Encoding: chunked\r\n"//Content-Type: text/html  Transfer-Encoding: chunked
+    //                          //"Content-Type: text/html\r\n"
+    //                          "Content-Type: application/x-zip-compressed\r\n"
+    //                          "Connection: keep-alive\r\n"
+    //                          "Keep-Alive: timeout=1000\r\n"
+    //                          "Content-Length: 15204315\r\n"
+    //                          "\r\n";
+
+
+
+        //printf("sent_size%d\n", sent_size);
+        if (sent_size == 0)
+        {
+            //set response_size and response_buf
+            conn->on_write_( conn->request_ptr_,conn->response_ptr_);
+        }
+        if (sent_size > response_size)
+        {
+            //sent_size=0;
+            printf("sent size %d \\ %d %d\n", sent_size ,response_size,conn->response_ptr_->m_response_len);
+            exit(11);
+        }
+        else if (sent_size == response_size)
+        {
+            conn->Close();
+        }
+        //sent_size=0;
+        while (sent_size < response_size)
+        {
+            int left = response_size - sent_size;
+            if (left > chunk_size)
+            {
+                left = chunk_size;
+            }
+            int ret = send(fd, response_buf + sent_size, left, MSG_DONTWAIT);
+            if (ret <= 0)
+            {
+                break;
+                perror("send wrong\n");
+                //LOG_ERROR("send wrong int on_get");
+            }
+            else
+            {
+                sent_size += ret;
+                printf("send %d %d\n",ret,sent_size);
+                if(sent_size==response_size)
+                {
+                    printf("send over\n");
+                    int z;
+                    linger so_linger;
+                    so_linger.l_onoff=0;
+                    z= setsockopt(fd,SOL_SOCKET,SO_LINGER,&so_linger,sizeof so_linger);
+                    if(z)
+                    {
+                        perror("setsockoption solinger:");
+                    }
+                    //sleep(2);
+                    conn->Close();
+                    return;
+                }
+            }
+
+
+        }
+    };
 
     thread_pool_=new ThreadPool(this);
     thread_pool_->Init(max_thread_,max_connection_);
