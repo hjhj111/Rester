@@ -8,7 +8,6 @@
 
 using namespace std;
 
-
 class Response
 {
 public:
@@ -23,8 +22,19 @@ public:
 
     ~Response()
     {
+//        if(m_response!= nullptr)
+//        {
+//            delete m_response;
+//        }
+//        if(m_data!= nullptr)
+//        {
+//            delete m_data;
+//        }
+        printf("response delete\n");
         delete m_response;
+        //m_response= nullptr;
         delete m_data;
+        //m_data= nullptr;
     }
 
     void combineResponse()
