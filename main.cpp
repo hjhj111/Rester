@@ -5,7 +5,7 @@
 
 using namespace std;
 
-#define MYTEST
+//#define MYTEST
 
 int main(int argc, char *argv[])
 {
