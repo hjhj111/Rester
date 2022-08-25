@@ -6,7 +6,7 @@
 
 class HttpParser{
 private:
-    std::map<std::string, std::string> http;
+    std::map<std::string, std::string> http_;
     std::string format_key(std::string &str);
 public:
     HttpParser(char *buf);
@@ -14,12 +14,12 @@ public:
     {
 
     }
-    void show();
+    void Show();
     std::string operator[](std::string str);
 
     std::string GetUrlParameter(string key)
     {
-        return GetParameter(key,http.at("url_paras"));
+        return GetParameter(key, http_.at("url_paras"));
     }
 
 private:
@@ -63,9 +63,9 @@ inline HttpParser::HttpParser(char* msg){
             std::string tmp;
             line_stream >> tmp;
             if(tmp.find("HTTP") == std::string::npos){
-                http.insert(std::make_pair("method", tmp));
+                http_.insert(std::make_pair("method", tmp));
                 line_stream >> tmp;
-                http.insert(std::make_pair("url_paras", tmp));
+                http_.insert(std::make_pair("url_paras", tmp));
                 //find url
                 string url;
                 smatch result;
@@ -78,16 +78,16 @@ inline HttpParser::HttpParser(char* msg){
                 {
                     url=tmp;
                 }
-                http.insert(std::make_pair("url", url));
+                http_.insert(std::make_pair("url", url));
 
                 line_stream >> tmp;
-                http.insert(std::make_pair("version", tmp));
+                http_.insert(std::make_pair("version", tmp));
             } else{
-                http.insert(std::make_pair("version", tmp));
+                http_.insert(std::make_pair("version", tmp));
                 line_stream >> tmp;
-                http.insert(std::make_pair("status", tmp));
+                http_.insert(std::make_pair("status", tmp));
                 line_stream >> tmp;
-                http.insert(std::make_pair("status_text", tmp));
+                http_.insert(std::make_pair("status_text", tmp));
             }
             part = headers;
             break;
@@ -103,7 +103,7 @@ inline HttpParser::HttpParser(char* msg){
                 continue;
             std::string tmp1(line, 0, pos);
             std::string tmp2(line, pos + 2);
-            http.insert(std::make_pair(format_key(tmp1), tmp2));
+            http_.insert(std::make_pair(format_key(tmp1), tmp2));
             break;
         }
         case body:
@@ -116,14 +116,14 @@ inline HttpParser::HttpParser(char* msg){
             break;
         }
     }
-    http.insert(std::make_pair("body", body_string));
+    http_.insert(std::make_pair("body", body_string));
 }
 
 //HttpParser::~HttpParser(){}
 
-inline void HttpParser::show(){
+inline void HttpParser::Show(){
     printf("Request parser result:-----------------\n");
-    for(auto it = http.cbegin(); it != http.cend(); ++it){
+    for(auto it = http_.cbegin(); it != http_.cend(); ++it){
         //std::cout << it->first << ": " << it->second << std::endl;
         printf("%s: %s\n",it->first.c_str(),it->second.c_str());
     }
@@ -133,8 +133,8 @@ inline void HttpParser::show(){
 
 inline std::string HttpParser::operator[](std::string str){
     //auto it = http.find(format_key(str));
-    auto it = http.find(str);
-    return it != http.end() ? it->second : "";
+    auto it = http_.find(str);
+    return it != http_.end() ? it->second : "";
 }
 
 inline std::string HttpParser::format_key(std::string &str){

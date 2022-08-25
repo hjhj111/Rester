@@ -1,20 +1,18 @@
 #ifndef UTLS_H
 #define UTLS_H
 #include<string>
-//#include<iostream>
 #include<fstream>
 #include<filesystem>
 #include<functional>
 #include<atomic>
-#include <string>
 #include <sstream>
 #include <chrono>
 
 #include<unistd.h>
 #include<sys/types.h>
 #include<sys/socket.h>
-#include<stdio.h>
-#include<stdlib.h>
+#include<cstdio>// stdio.h was deprecated
+#include<cstdlib> // stdlib.h was deprecated
 #include<fcntl.h>
 #include<netinet/in.h>
 #include<arpa/inet.h>
@@ -25,12 +23,11 @@
 #include"rapidjson/document.h"
 #include "rapidjson/filereadstream.h"
 
-#include "TimeCount.h"
+#include "time_count.h"
 #include "log/log.h"
 #include "http-parser/HttpParser.h"
 #include "http-parser/httpresponse.h"
 
-using namespace std;
 using namespace rapidjson;
 
 struct Config
@@ -115,7 +112,6 @@ inline ostream& operator <<(ostream& os, const Config& config)
     return os;
 }
 
-//extern Config config;
 class Connection;
 using ConnectionPtr=shared_ptr<Connection>;
 using ConnectCallBack=function<void(ConnectionPtr)>;
@@ -125,57 +121,40 @@ using PostCallBack=function<void(RequestPtr,ResponsePtr)>;
 using CloseCallBack=function<void(ConnectionPtr)>;
 using ReadCallBack=function<void(ConnectionPtr)>;
 
-extern atomic<int> request_count;
-extern atomic<int> connection_count;
-extern atomic<int> add_and_delete_socket_time;
-extern int buf_size;
-extern int chunk_size;
+extern atomic<int> g_request_count;
+extern atomic<int> g_connection_count;
+extern atomic<int> g_add_and_delete_socket_time;
+extern int g_recv_buf_size;
+extern int g_once_sent_size;
 
-inline std::string dec2hex(int i, int width)
-{
-    std::stringstream ioss;     //定义字符串流
-    std::string s_temp;         //存放转化后字符
-    ioss << std::hex << i;      //以十六制形式输出
-    ioss >> s_temp;
-
-    if(width > s_temp.size())
-    {
-        std::string s_0(width - s_temp.size(), '0');      //位数不够则补0
-        s_temp = s_0 + s_temp;                            //合并
-    }
-
-    std::string s = s_temp.substr(s_temp.length() - width, s_temp.length());    //取右width位
-    return s;
-}
-
-inline bool recv_once(int fd,char buf[],int& size_read)
+inline bool RecvOnce(int fd, char buf[], int& size_read)
 {
     size_read=0;
     int ind=0;
     int n_try=0;
-    bool re=true;
+    bool ret=true;
     //link=true;
     while (true)
     {
         n_try++;
-        int ret = recv(fd,buf+ind,buf_size-ind,MSG_DONTWAIT);
+        int ret = recv(fd,buf+ind, g_recv_buf_size - ind, MSG_DONTWAIT);
 
         if (ret==-1)
         {
-            //printf("%s\n", strerror(errno));
+            printf("%s\n", strerror(errno));
             if (size_read>0)// //(errno == EAGAIN||errno == EWOULDBLOCK)
             {
                 break;
             }
             else
             {
-                re=false;
+                ret=false;
                 break;
             }
         }
         else if(ret==0)
         {
-            re=false;
+            ret=false;
             break;
         }
         else
@@ -183,10 +162,10 @@ inline bool recv_once(int fd,char buf[],int& size_read)
             size_read+=ret;
         }
     }
-    return re;
+    return ret;
 }
 
-inline int read_file_all(const char* file_path_name, char* & buf)
+inline int ReadFileAll(const char* file_path_name, char* & buf)
 {
     ifstream f_read(file_path_name);
     if(f_read.fail())
@@ -203,7 +182,7 @@ inline int read_file_all(const char* file_path_name, char* & buf)
     return length;
 }
 
-inline int get_file_size(ifstream& f_read)
+inline int GetFileSize(ifstream& f_read)
 {
     f_read.seekg(0,ios::end);
     int length=f_read.tellg();
@@ -211,12 +190,14 @@ inline int get_file_size(ifstream& f_read)
     return length;
 }
 
-inline int read_file_part(ifstream& f_read, int part_size ,char* & buf)
+inline void ReadFilePart(ifstream& f_read, int part_size , char* & buf)
 {
     f_read.read(buf,part_size);
 }
 
-inline pair<int,int> get_file_chunk(const char* file_path_name, char*& buf,char* head,int head_size)
+//for multipart/form
+//TODO
+inline pair<int,int> GetFileChunk(const char* file_path_name, char*& buf, char* head, int head_size)
 {
     ifstream f_read(file_path_name);
     if(f_read.fail())
@@ -224,9 +205,9 @@ inline pair<int,int> get_file_chunk(const char* file_path_name, char*& buf,char*
         printf("file not open: ");
         return make_pair(-1,-1);
     }
-    int length= get_file_size(f_read)-1;
+    int length= GetFileSize(f_read) - 1;
 
-    int n=length/chunk_size+1;
+    int n= length / g_once_sent_size + 1;
     printf("file length %d chunk %d\n",length,n);
     int buf_length=length+5000;
     buf=new char[buf_length];
@@ -238,7 +219,7 @@ inline pair<int,int> get_file_chunk(const char* file_path_name, char*& buf,char*
         //printf("%d\n",i);
         if(i==n-1)
         {
-            int left=length-(n-1)*chunk_size;
+            int left=length- (n-1) * g_once_sent_size;
 //            int left_bit=0;
 //            int left1=left;
 //            while(true)
@@ -255,7 +236,6 @@ inline pair<int,int> get_file_chunk(const char* file_path_name, char*& buf,char*
 //            }
             if(left>0)
             {
-
                 char gap_last[7];
                 snprintf(gap_last,sizeof(gap_last),"%s\r\n", "17fc");//dec2hex(left,4).c_str()
                 strcpy(buf+ind,gap_last);
@@ -273,15 +253,14 @@ inline pair<int,int> get_file_chunk(const char* file_path_name, char*& buf,char*
         {
             strcpy(buf+ind,gap);
             ind+=sizeof(gap);
-            f_read.read(buf+ind,chunk_size);
-            ind+=chunk_size;
+            f_read.read(buf+ind, g_once_sent_size);
+            ind+=g_once_sent_size;
             char en[]="\r\n";
             strcpy(buf+ind,en);
             ind+=2;
         }
         //printf("%d\n",i);
     }
-    //printf("hhhhhhhhhhhhhh");
     f_read.close();
 
     //buf_length= strlen(buf);
@@ -290,7 +269,8 @@ inline pair<int,int> get_file_chunk(const char* file_path_name, char*& buf,char*
 
 }
 
-inline int get_id()
+//for connection id
+inline int GetUid()
 {
     long long time_ms=chrono::duration_cast<chrono::milliseconds>
             (chrono::high_resolution_clock::now().time_since_epoch()).count();
@@ -298,7 +278,8 @@ inline int get_id()
     return ha(time_ms);
 }
 
-inline void print_raw(char* raw, int size)
+//for test bytes of http message
+inline void PrintRaw(char* raw, int size)
 {
     for(int i=0;i<size;i++)
     {
@@ -322,11 +303,21 @@ inline void print_raw(char* raw, int size)
     }
 }
 
-//printf has no buffer
-//inline void printf_now(const char* format,...)
+// wrong when declared here for http header checking in httpresponse.h
+//bool StrSame(const std::string& s1, const std::string& s2)
 //{
-//    printf(format);
-//    fflush(stdout);
+//    if(s1.size()!=s2.size())
+//    {
+//        return false;
+//    }
+//    for(int i=0;i<s1.size();i++)
+//    {
+//        if(s1[i]!=s2[i]&&std::abs(s1[i]-s2[i])!=26)
+//        {
+//            return false;
+//        }
+//    }
+//    return true;
 //}
 
 /*exit code 1 listen fd error

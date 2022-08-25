@@ -1,7 +1,7 @@
 #include "connection.h"
-#include"connectionthread.h"
+#include"connections_thread.h"
 
-Connection::Connection(ResterServer* server)
+Connection::Connection(Rester* server)
     :server_(server)
 {
     response_ptr_= make_shared<Response>();
@@ -43,7 +43,7 @@ void Connection::Close()
     thread_->DeleteConnection(GetShare() );
 }
 
-void Connection::Init(ConnectionThread* thread)
+void Connection::Init(ConnectionsThread* thread)
 {
     thread_=thread;
     thread->AddConnection(GetShare());

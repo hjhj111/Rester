@@ -18,43 +18,48 @@ using namespace std;
 
 using ConnectionFunc=function<void(shared_ptr<Connection>conn)>;
 
-class ConnectionThread
+class ConnectionsThread
 {
 public:
-    ConnectionThread()=delete;
+    ConnectionsThread()=delete;
 
-    ConnectionThread(ResterServer* server,int max_connection);
-    ~ConnectionThread()
+    ConnectionsThread(Rester* server, int max_connection);
+
+    ~ConnectionsThread()
     {
         running_= false;
         connections_new_.clear();
         connections_removed_.clear();
-        connections_.clear();
+        //connections_.clear();
         connection_thread_.join();
     }
 
     void Init();
+
     void AddConnection(ConnectionPtr conn);
+
     void DeleteConnection(ConnectionPtr conn);
 
-    ResterServer* server_;
+    ConnectionPtr GetConnection(int fd)
+    {
+
+    }
+
+    Rester* server_;
     thread connection_thread_;
     atomic<bool> running_{true};
 
-    list<ConnectionPtr> connections_;
+    //list<ConnectionPtr> connections_;
+
     mutex mutex_new_;
     list<ConnectionPtr> connections_new_;
     mutex mutex_removed_;
     list<ConnectionPtr> connections_removed_;
-    mutex mutex_map_;
+    //no need
+    //mutex mutex_map_;
     unordered_map<int,ConnectionPtr> fds_connections_;
-    //mutex mutex_connections;
     int max_connection_;
-
     int epoll_fd_;
-
-    //GetCallBack on_get_;
-    //CloseCallBack on_close_;
 
     vector<ConnectionFunc> connection_funcs;
 };

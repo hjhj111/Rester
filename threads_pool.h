@@ -3,14 +3,14 @@
 #include<vector>
 
 //#include"utls.h"
-#include"connectionthread.h"
+#include"connections_thread.h"
 
-using namespace std;
+//using namespace std;
 
 class ThreadPool
 {
 public:
-    ThreadPool(ResterServer* server)
+    ThreadPool(Rester* server)
     :server_(server)
     {
 
@@ -26,13 +26,13 @@ public:
 
     void Init(int max_thread,int max_connection);
 
-    ConnectionThread* GetThread();
+    ConnectionsThread* GetThread();
 
 private:
-    ResterServer* server_;
+    Rester* server_;
     int max_thread_;
     int max_connection_;
-    vector<ConnectionThread*> threads_;
+    vector<ConnectionsThread*> threads_;
     int thread_ind_=0;
 };
 

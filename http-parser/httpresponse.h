@@ -1,169 +1,218 @@
 #ifndef HTTPRESPONSE_H
 #define HTTPRESPONSE_H
 #pragma once
-#include<string>
 #include<unordered_map>
 #include<regex>
 #include<vector>
 
-using namespace std;
+#include "../utls.h"
+
+//using namespace std;
+
+//for http header checking
+inline bool StrSame(const std::string& s1, const std::string& s2)
+{
+    if(s1.size()!=s2.size())
+    {
+        return false;
+    }
+    for(int i=0;i<s1.size();i++)
+    {
+        if(s1[i]!=s2[i]&&std::abs(s1[i]-s2[i])!=26)
+        {
+            return false;
+        }
+    }
+    return true;
+}
 
 class Response
 {
 public:
     Response()
-        : m_head_len(0),
-          m_Protocol("HTTP/1.1"),
-          m_MajorVersion(1),
-          m_MinorVersion(1)
+        : head_len_(0),
+          protocol_("HTTP/1.1"),
+          major_version_(1),
+          minor_version_(1),
+
+          response_(nullptr),
+          response_len_(0),
+          data_size_(0),
+          status_code_(0),
+          data_(nullptr)
     {
 
     }
 
     ~Response()
     {
-//        if(m_response!= nullptr)
-//        {
-//            delete m_response;
-//        }
-//        if(m_data!= nullptr)
-//        {
-//            delete m_data;
-//        }
-        printf("response delete\n");
-        delete m_response;
-        //m_response= nullptr;
-        delete m_data;
-        //m_data= nullptr;
-    }
-
-    void combineResponse()
-    {
-        m_head.clear();
-        m_head.append(m_Protocol);
-        m_head.append(" ");
-        m_head.append(to_string(m_StatusCode));
-        m_head.append(" ");
-        m_head.append(m_StatusDescription);
-        m_head.append("\r\n");
-
-        for (auto header : m_Headers)
+        if(response_ != nullptr)
         {
-            m_head.append(header.first);
-            m_head.append(": ");
-            m_head.append(header.second);
-            m_head.append("\r\n");
+            delete response_;
+            response_= nullptr;
         }
-        m_head.append("\r\n");
-        //m_head.append(m_data);
-        m_head_len = m_head.size();
-        m_response_len= m_head_len + m_DataSize;
-        m_response=new char[m_response_len+1000];
-        memcpy(m_response, m_head.c_str(), m_head_len);
-        memcpy(m_response + m_head_len, m_data, m_DataSize);
-    }
-
-    string getData()
-    {
-        return m_data;
-    }
-
-    void setData(const char* data, int datasize)
-    {
-        //m_data.assign(data, datasize);
-        m_data=new char[datasize];
-        memcpy(m_data,data,datasize);
-        m_DataSize=datasize;
-    }
-
-    int getDataSize()
-    {
-        return m_DataSize;
-    }
-
-    string getProtocol()
-    {
-        return m_Protocol;
-    }
-
-    void setProtocol(string protocol)
-    {
-        m_Protocol = protocol;
-    }
-
-    pair<int, int> getVersion()
-    {
-        return { m_MajorVersion,m_MinorVersion };
-    }
-
-    const string getHead()
-    {
-        return m_head;
-    }
-
-    int getHeadLen()
-    {
-        return m_head_len;
-    }
-
-    char* getResponse()
-    {
-        return m_response;
-    }
-
-    int getResponseLen()
-    {
-        return m_response_len;
-    }
-
-    string getStatusDescription()
-    {
-        return m_StatusDescription;
-    }
-
-    void setStatusDescription(string statusDescription)
-    {
-        m_StatusDescription = statusDescription;
-    }
-
-    int getStatusCode()
-    {
-        return m_StatusCode;
-    }
-
-    void setStatusCode(int statusCode)
-    {
-        m_StatusCode = statusCode;
-    }
-
-    string findHeader(string name)
-    {
-        if (m_Headers.find(name) != m_Headers.end())
+        if(data_ != nullptr)
         {
-            return m_Headers.at(name);
+            delete data_;
+            data_= nullptr;
+        }
+        printf("response delete\n");
+//        delete m_response;
+//        m_response= nullptr;
+//        delete m_data;
+//        m_data= nullptr;
+    }
+
+    void CombineResponse()
+    {
+        head_.clear();
+        head_.append(protocol_);
+        head_.append(" ");
+        head_.append(to_string(status_code_));
+        head_.append(" ");
+        head_.append(status_description_);
+        head_.append("\r\n");
+
+        bool has_content_length=false;
+        for (auto header : headers_)
+        {
+            if(StrSame(header.first, "Content-Length"))
+            {
+                has_content_length=true;
+            }
+            head_.append(header.first);
+            head_.append(": ");
+            head_.append(header.second);
+            head_.append("\r\n");
+        }
+        if(!has_content_length)
+        {
+            head_.append("Content-Length");
+            head_.append(": ");
+            head_.append(to_string(data_size_));
+            head_.append("\r\n");
+        }
+        head_.append("\r\n");
+        //m_head.append(m_data);
+        head_len_ = head_.size();
+        response_len_= head_len_ + data_size_;
+        response_=new char[response_len_ + 1000];
+        memcpy(response_, head_.c_str(), head_len_);
+        memcpy(response_ + head_len_, data_, data_size_);
+    }
+
+    std::string BodyStr()
+    {
+        return data_;
+    }
+
+    const char* BodyData()
+    {
+        return data_;
+    }
+
+    void SetData(const char* data, int datasize)
+    {
+        if(data_ != nullptr)
+        {
+            delete data_;
+        }
+        data_=new char[datasize];
+        memcpy(data_, data, datasize);
+        data_size_=datasize;
+    }
+
+    int DataSize()
+    {
+        return data_size_;
+    }
+
+    std::string Protocol()
+    {
+        return protocol_;
+    }
+
+    void Protocol(std::string protocol)
+    {
+        protocol_ = protocol;
+    }
+
+    pair<int, int> Version()
+    {
+        return {major_version_, minor_version_ };
+    }
+
+    const std::string& HeadersStr()
+    {
+        return head_;
+    }
+
+    int HeadersLen()
+    {
+        return head_len_;
+    }
+
+    char* ResponseData()
+    {
+        return response_;
+    }
+
+    int ResponseLen()
+    {
+        return response_len_;
+    }
+
+    std::string StatusDescription()
+    {
+        return status_description_;
+    }
+
+    void SetStatusDescription(std::string statusDescription)
+    {
+        status_description_ = statusDescription;
+    }
+
+    int StatusCode()
+    {
+        return status_code_;
+    }
+
+    void SetStatusCode(int statusCode)
+    {
+        status_code_ = statusCode;
+    }
+
+    //if name was not set, return ""
+    std::string FindHeader(const std::string& name)
+    {
+        if (headers_.find(name) != headers_.end())
+        {
+            return headers_.at(name);
         }
         return "";
     }
 
-    int setHeader(string name, string value)
+    // return 1 if name exist, or return 0
+    int SetHeader(const std::string& name, const std::string& value)
     {
-        if (m_Headers.find(name) != m_Headers.end())
+        if (headers_.find(name) != headers_.end())
         {
-            m_Headers[name] = value;
+            headers_[name] = value;
             return 1;
         }
         else
         {
-            m_Headers.insert(make_pair(name, value));
+            headers_.insert(make_pair(name, value));
             return 0;
         }
     }
 
-    void printResponse()
+    //for test origin bytes
+    void PrintResponse()
     {
-        for (int i=0; i < m_head.size(); i++)
+        for (int i=0; i < head_.size(); i++)
         {
-            auto ch = m_head[i];
+            auto ch = head_[i];
             if (ch == '\r')
             {
                 printf("\\r\\n\n");
@@ -180,26 +229,19 @@ public:
         printf("\n");
     }
 
-
-    //file
-    //char* buf_;
-    //int buf_size_=0;//must be initialized
-    char* m_response;
-    int m_response_len;
-
 private:
-    string m_head;
-    int m_head_len;
-    string m_Protocol;
-    unsigned int m_MajorVersion;
-    unsigned int m_MinorVersion;
-    int m_StatusCode;
-    string m_StatusDescription;
-    unordered_map<string, string> m_Headers;
-    char* m_data;
-    int m_DataSize;
-
-
+    char* response_;
+    int response_len_;
+    std::string head_;
+    int head_len_;
+    std::string protocol_;
+    unsigned int major_version_;
+    unsigned int minor_version_;
+    int status_code_;
+    std::string status_description_;
+    unordered_map<std::string, std::string> headers_;
+    char* data_;
+    int data_size_;
 };
 
 using ResponsePtr=shared_ptr<Response>;

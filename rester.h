@@ -3,8 +3,8 @@
 #include<unistd.h>
 #include<sys/types.h>
 #include<sys/socket.h>
-#include<stdio.h>
-#include<stdlib.h>
+#include<cstdio>
+#include<cstdlib>
 #include<fcntl.h>
 #include<netinet/in.h>
 #include<arpa/inet.h>
@@ -14,28 +14,25 @@
 #include<functional>
 #include <list>
 
-//#include "http-parser/http_parser.h"
+#include "threads_pool.h"
+#include "router.h"
 
-//#include "utls.h"
-#include "threadpool.h"
-#include "UrlWorker.h"
-//class UrlWorker;
-using namespace std;
 
-class ResterServer
+class Rester
 {
 
 public:
-    ResterServer(const Config&);
+    Rester(const Config&);
 
     void Init();
 
-    void AddWorker(const UrlWorker& worker);
+    void AddWorker(const Router& worker);
 
 public:
     ThreadPool* thread_pool_;
     //ThreadPool a;
-    atomic<bool> running_{true};
+    std::atomic<bool> running_{true};
+    int server_port_;
     int listen_fd_;
     int epoll_fd_;
     int max_connection_;
@@ -46,7 +43,7 @@ public:
     WriteCallBack  on_write_;
 private:
     list<shared_ptr<Connection>> connections_;
-    unordered_map<string,UrlWorker> url_workers_;
+    unordered_map<string,Router> url_workers_;
 };
 
 #endif // RESTERSERVER_H

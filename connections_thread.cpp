@@ -1,28 +1,28 @@
 #include<unistd.h>
 #include<sys/types.h>
 #include<sys/socket.h>
-#include<stdio.h>
-#include<stdlib.h>
+#include<cstdio>
+#include<cstdlib>
 #include<fcntl.h>
 #include<netinet/in.h>
 #include<arpa/inet.h>
 #include<sys/ioctl.h>
 #include <sys/epoll.h>
-#include "connectionthread.h"
+#include "connections_thread.h"
 #include "connection.h"
 
 #include <algorithm>
 
-#include "resterserver.h"
+#include "rester.h"
 
-ConnectionThread::ConnectionThread(ResterServer* server, int max_connection):
+ConnectionsThread::ConnectionsThread(Rester* server, int max_connection):
     max_connection_(max_connection),
     server_(server)
 {
 
 }
 
-void ConnectionThread::Init()
+void ConnectionsThread::Init()
 {
     epoll_fd_ = epoll_create(max_connection_);
 
@@ -51,9 +51,13 @@ void ConnectionThread::Init()
                     continue;
                     exit(12);
                 }
-                if(std::find(connections_.begin(), connections_.end(), conn)!=connections_.end())
+//                if(std::find(connections_.begin(), connections_.end(), conn)!=connections_.end())
+//                {
+//                    connections_.remove(conn);
+//                }
+                if(fds_connections_.find(conn->connected_fd_)!=fds_connections_.end())
                 {
-                    connections_.remove(conn);
+                    fds_connections_.erase(fds_connections_.find(conn->connected_fd_));
                 }
             }
             //add new connection
@@ -88,7 +92,8 @@ void ConnectionThread::Init()
                     perror("epoll add wrong\n");
                     exit(2);
                 }
-                connections_.push_back(conn);
+//                connections_.push_back(conn);
+                fds_connections_[conn->connected_fd_]=conn;
             }
             epoll_event events[max_connection_];
             memset(events, 0x00, sizeof(epoll_event)*max_connection_);
@@ -131,13 +136,13 @@ void ConnectionThread::Init()
                     if(fds_connections_.find(events[i].data.fd)!=fds_connections_.end())
                     {
                         auto conn = fds_connections_.at(events[i].data.fd);
-                        //conn->Close();
+                        conn->Close();
                         //exit(8);
                     }
                 }
                 if(events[i].events & EPOLLERR)
                 {
-                    //exit(9);
+                    exit(9);
                 }
             }
 
@@ -146,26 +151,26 @@ void ConnectionThread::Init()
     connection_thread_=thread(thread_fun);
 }
 
-void ConnectionThread::AddConnection(ConnectionPtr conn)
+void ConnectionsThread::AddConnection(ConnectionPtr conn)
 {
     {
         lock_guard<mutex> guard(mutex_new_);
         connections_new_.push_back(conn);
-        fds_connections_[conn->connected_fd_]=conn;
+//        fds_connections_[conn->connected_fd_]=conn;
     }
 }
 
-void ConnectionThread::DeleteConnection(ConnectionPtr conn)
+void ConnectionsThread::DeleteConnection(ConnectionPtr conn)
 {
     //return;
     //printf(" delete\n");
     {
         lock_guard<mutex> guard(mutex_removed_);
         connections_removed_.push_back(conn);
-        if(fds_connections_.find(conn->connected_fd_)!=fds_connections_.end())
-        {
-            fds_connections_.erase(fds_connections_.find(conn->connected_fd_));
-        }
+//        if(fds_connections_.find(conn->connected_fd_)!=fds_connections_.end())
+//        {
+//            fds_connections_.erase(fds_connections_.find(conn->connected_fd_));
+//        }
     }
     //printf(" delete\n");
 }

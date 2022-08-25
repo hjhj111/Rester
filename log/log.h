@@ -25,6 +25,7 @@ public:
     {
         Log::get_instance()->async_write_log();
     }
+
     //可选择的参数有日志文件、日志缓冲区大小、最大行数以及最长日志条队列
     bool init(const char *file_name, int close_log, int log_buf_size = 8192, int split_lines = 5000000, int max_queue_size = 0);
 
@@ -35,12 +36,12 @@ public:
 
 private:
     Log();
+
     virtual ~Log();
 
 public:
     void *async_write_log()
     {
-        //printf("hhhhhhhhhhhhhhhh");
         string single_log;
         //从阻塞队列中取出一个日志string，写入文件
         while (true)

@@ -19,9 +19,9 @@
 #include "utls.h"
 //#include "connectionthread.h"
 
-class ResterServer;
+class Rester;
 
-class ConnectionThread;
+class ConnectionsThread;
 
 enum class ConnectionState
 {
@@ -58,13 +58,13 @@ public:
 
 
 
-    Connection(ResterServer* server);
+    Connection(Rester* server);
 
 //    Connection(const Connection& connection);
 //
 //    Connection& operator=(const Connection& connection);
 
-    void Init(ConnectionThread* thread);
+    void Init(ConnectionsThread* thread);
 
     bool operator==(const Connection& other);
 
@@ -76,8 +76,8 @@ public:
     unsigned short int port_;   //client port
     int connected_fd_;          //connect socket
     bool is_on_;                //network switch
-    ResterServer* server_;
-    ConnectionThread* thread_;
+    Rester* server_;
+    ConnectionsThread* thread_;
     epoll_event event_;
     ConnectionState state_;
 
