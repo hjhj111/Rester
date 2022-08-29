@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     Rester server(config);
 
     //close_log > 0 for close log
-    if(!Log::get_instance()->init("log",1,8192,5000000,50000))
+    if(!Log::get_instance()->init("log",0,8192,5000000,50000))
     {
         return 4;
     }

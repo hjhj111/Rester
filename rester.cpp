@@ -14,6 +14,10 @@ Rester::Rester(const Config& config)
     on_connect_=[](ConnectionPtr conn)
     {
         printf("on connected\n");
+        struct in_addr tmp;
+        tmp.s_addr=conn->ip_;
+        auto str_ip=inet_ntoa(tmp);
+        LOG_INFO("new connection:%s： %d",str_ip,conn->port_);
     };
 
     on_read_=[](ConnectionPtr conn)
@@ -267,7 +271,8 @@ void Rester::Init()
                     LOG_INFO("new connection %s:%d",inet_ntoa(c_addr.sin_addr), ntohs(c_addr.sin_port))
                     auto connection=make_shared<Connection>(this);
                     connection->connected_fd_ = nfd;
-                    connection->ip_ = ntohl(c_addr.sin_addr.s_addr);
+                    //connection->ip_ = ntohl(c_addr.sin_addr.s_addr);
+                    connection->ip_ = c_addr.sin_addr.s_addr;//keep net byte order
                     connection->port_ = ntohs(c_addr.sin_port);
                     connection->is_on_ = false;
                     epoll_event ev;

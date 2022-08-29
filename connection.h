@@ -72,7 +72,7 @@ public:
 
 
 public:
-    unsigned long ip_;          //client ip
+    unsigned int ip_;          //client ip
     unsigned short int port_;   //client port
     int connected_fd_;          //connect socket
     bool is_on_;                //network switch

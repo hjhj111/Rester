@@ -1,11 +1,13 @@
 #ifndef LOG_H
 #define LOG_H
 
-#include <stdio.h>
+#include <atomic>
+
+#include <cstdio>
 #include <iostream>
 #include <string>
 #include <mutex>
-#include <stdarg.h>
+#include <cstdarg>
 #include <pthread.h>
 #include "block_queue.h"
 
@@ -19,6 +21,16 @@ public:
     {
         static Log instance;
         return &instance;
+    }
+
+    static void* close()
+    {
+        get_instance()->m_close_log=1;
+    }
+
+    static void* open()
+    {
+        get_instance()->m_close_log=0;
     }
 
     static void *flush_log_thread(void *args)
@@ -72,7 +84,7 @@ private:
 
     locker m_mutex;
 public:
-    int m_close_log; //关闭日志
+    atomic<int> m_close_log; //关闭日志
 };
 
 #define LOG_DEBUG(format, ...) if(0 == Log::get_instance()->m_close_log) {Log::get_instance()->write_log(0, format, ##__VA_ARGS__); Log::get_instance()->flush();}
