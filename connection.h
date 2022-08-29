@@ -39,6 +39,10 @@ public:
         response_ptr_= make_shared<Response>();
     }
 
+    Connection(const Connection& conn) = delete;
+
+    Connection& operator=(const Connection& conn) = delete;
+
     ~Connection()
     {
 

@@ -24,6 +24,10 @@ class Rester
 public:
     Rester(const Config&);
 
+    Rester(const Rester& ) = delete;
+
+    Rester& operator = (const Rester& ) = delete;
+
     void Init();
 
     void AddWorker(const Router& worker);

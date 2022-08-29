@@ -8,20 +8,18 @@
 #include <memory>
 #include<sys/epoll.h>
 
-//#include"utls.h"
 #include"connection.h"
-//#include"resterserver.h"
 
 using namespace std;
-
-//class Connection;
 
 using ConnectionFunc=function<void(shared_ptr<Connection>conn)>;
 
 class ConnectionsThread
 {
 public:
-    ConnectionsThread()=delete;
+    ConnectionsThread(const ConnectionsThread& ) = delete;
+
+    ConnectionsThread& operator = (const ConnectionsThread& ) = delete;
 
     ConnectionsThread(Rester* server, int max_connection);
 

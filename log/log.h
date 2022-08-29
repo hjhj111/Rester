@@ -16,7 +16,7 @@ using namespace std;
 class Log
 {
 public:
-    //C++11以后,使用局部变量懒汉不用加锁
+    //better than new Log for thread safety
     static Log *get_instance()
     {
         static Log instance;
@@ -49,7 +49,11 @@ public:
 private:
     Log();
 
-    virtual ~Log();
+    virtual ~Log();//virtual dtor basic class
+
+    Log& operator=(const Log& log);
+
+    Log(const Log& log);
 
 public:
     void *async_write_log()
