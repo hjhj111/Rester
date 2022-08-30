@@ -23,6 +23,8 @@
 #include"rapidjson/document.h"
 #include "rapidjson/filereadstream.h"
 
+#include "cpp_redis/cpp_redis"
+
 #include "time_count.h"
 #include "log/log.h"
 #include "http-parser/HttpParser.h"
@@ -118,6 +120,8 @@ using ConnectCallBack=function<void(ConnectionPtr)>;
 using GetCallBack=function<void(RequestPtr,ResponsePtr)>;
 using WriteCallBack=function<void(ConnectionPtr)>;
 using PostCallBack=function<void(RequestPtr,ResponsePtr)>;
+using DeleteCallBack=function<void(RequestPtr,ResponsePtr)>;
+using OptionsCallBack=function<void(RequestPtr,ResponsePtr)>;
 using CloseCallBack=function<void(ConnectionPtr)>;
 using ReadCallBack=function<void(ConnectionPtr)>;
 
@@ -302,6 +306,25 @@ inline void PrintRaw(char* raw, int size)
         }
     }
 }
+
+//TODO connections  pool
+inline cpp_redis::client* ConnectToRedis()
+{
+    static cpp_redis::client client;
+    if(!client.is_connected())
+    {
+        client.connect("192.168.56.1", 6379,//115.156.245.91
+                       [](const std::string &host, std::size_t port, cpp_redis::client::connect_state status)
+                       {
+                           if (status == cpp_redis::client::connect_state::ok)
+                           {
+                               std::cout << "client connected to " << host << ":" << port << std::endl;
+                           }
+                       });
+    }
+   return &client;
+}
+
 
 // wrong when declared here for http header checking in httpresponse.h
 //bool StrSame(const std::string& s1, const std::string& s2)

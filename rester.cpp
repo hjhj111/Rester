@@ -38,35 +38,47 @@ Rester::Rester(const Config& config)
         {
             printf("%s",buf);
             LOG_INFO(buf);
-            conn->request_ptr_=make_shared<HttpParser>(buf);
+            conn->request_ptr_=make_shared<HttpParser>(buf,size_read);
             auto request_ptr=conn->request_ptr_;
 //            parser.show();
 //            printf("key1: %s  key2: %s\n",parser.GetUrlParameter("key1").c_str(),
 //                   parser.GetUrlParameter("key2").c_str());
             auto url=(*request_ptr)["url"];
+            printf("url: %s\n",url.c_str());
             auto& url_workers=conn->server_->url_workers_;
+            conn->server_->PrintWorkers();
             if(url_workers.find(url) != url_workers.end())
             {
                 if((*request_ptr)["method"] == "GET")
                 {
                     printf("distribute get\n");
-                    conn->on_write_=url_workers.at("/").OnGetFunc();
+                    conn->on_write_=url_workers.at(url).OnGetFunc();
                 }
                 else if((*request_ptr)["method"] == "POST")
                 {
                     conn->on_write_=url_workers.at(url).OnPostFunc();
                 }
+                else if((*request_ptr)["method"] == "DELETE")
+                {
+                    conn->on_write_=url_workers.at(url).OnDeleteFunc();
+                }
+                else if((*request_ptr)["method"] == "OPTIONS")
+                {
+                    conn->on_write_=url_workers.at(url).OnOptionsFunc();
+                }
                 else
                 {
                     printf("url %s does not have this http method %s",url.c_str(),
                            (*request_ptr)["method"].c_str());
-                    exit(21);
+                    conn->Close();
+                    //exit(21);
                 }
             }
             else
             {
                 printf("no url %s", url.c_str());
-                exit(22);
+                conn->Close();
+                //exit(22);
             }
             //response data ready
             conn->read=true;

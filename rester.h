@@ -32,6 +32,14 @@ public:
 
     void AddWorker(const Router& worker);
 
+    void PrintWorkers()
+    {
+        for(auto& worker:url_workers_)
+        {
+            printf("worker: %s is running\n",worker.first.c_str());
+        }
+    }
+
 public:
     ThreadPool* thread_pool_;
     //ThreadPool a;

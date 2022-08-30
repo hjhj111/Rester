@@ -9,7 +9,7 @@ private:
     std::map<std::string, std::string> http_;
     std::string format_key(std::string &str);
 public:
-    HttpParser(char *buf);
+    HttpParser(char *buf,int size);
     ~HttpParser()
     {
 
@@ -43,8 +43,9 @@ private:
 
 using RequestPtr=shared_ptr<HttpParser>;
 
-inline HttpParser::HttpParser(char* msg){
-    std::string buf(msg);
+inline HttpParser::HttpParser(char* msg, int size){
+    std::string buf(msg,size);
+    cout<<buf<<endl;
     std::istringstream buf_stream(buf);
     enum parts{
         start_line,
@@ -69,7 +70,8 @@ inline HttpParser::HttpParser(char* msg){
                 //find url
                 string url;
                 smatch result;
-                if (std::regex_search(tmp.cbegin(), tmp.cend(), result, std::regex("/.*?/\?")))
+                cout<<tmp<<endl;
+                if (std::regex_search(tmp.cbegin(), tmp.cend(), result, std::regex("/.*?$")))
                 {
                      url=result[0];
                      //getchar();
