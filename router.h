@@ -45,25 +45,36 @@ public:
         on_Options_=on_options;
     }
 
-    void OnGet(RequestPtr request_ptr, ResponsePtr response_ptr)
+    //deprecated
+    void SetConnect(ConnectCallBack on_connect)
     {
-        on_get_(request_ptr, response_ptr);
+        on_connect_=on_connect;
     }
 
-    void OnPost(RequestPtr request_ptr, ResponsePtr response_ptr)
+    void SetClose(CloseCallBack on_close)
     {
-        on_post_(request_ptr, response_ptr);
+        on_close_=on_close;
     }
 
-    void OnDelete(RequestPtr request_ptr, ResponsePtr response_ptr)
-    {
-        on_delete_(request_ptr, response_ptr);
-    }
-
-    void OnOptions(RequestPtr request_ptr, ResponsePtr response_ptr)
-    {
-        on_Options_(request_ptr,response_ptr);
-    }
+//    void OnGet(RequestPtr request_ptr, ResponsePtr response_ptr)
+//    {
+//        on_get_(request_ptr, response_ptr);
+//    }
+//
+//    void OnPost(RequestPtr request_ptr, ResponsePtr response_ptr)
+//    {
+//        on_post_(request_ptr, response_ptr);
+//    }
+//
+//    void OnDelete(RequestPtr request_ptr, ResponsePtr response_ptr)
+//    {
+//        on_delete_(request_ptr, response_ptr);
+//    }
+//
+//    void OnOptions(RequestPtr request_ptr, ResponsePtr response_ptr)
+//    {
+//        on_Options_(request_ptr,response_ptr);
+//    }
 
     GetCallBack OnGetFunc() const
     {
@@ -85,6 +96,15 @@ public:
         return on_Options_;
     }
 
+    CloseCallBack OnCloseFunc() const
+    {
+        return on_close_;
+    }
+
+    ConnectCallBack OnConnectFunc() const
+    {
+        return on_connect_;
+    }
 
     string Url() const
     {
@@ -98,6 +118,13 @@ private:
     PostCallBack on_post_;
     DeleteCallBack on_delete_;
     OptionsCallBack  on_Options_;
+
+    ConnectCallBack on_connect_;//connection callback can not be set
+    // before data read from client and router is chosen,so it is no meaning to set on_connect_.
+    // it is universal, and set by rester
+    CloseCallBack  on_close_;
+
+    //condition_variable conv;
 };
 
 

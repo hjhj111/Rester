@@ -49,22 +49,26 @@ Rester::Rester(const Config& config)
             conn->server_->PrintWorkers();
             if(url_workers.find(url) != url_workers.end())
             {
+                conn->on_close_=url_workers.at(url).OnCloseFunc();
                 if((*request_ptr)["method"] == "GET")
                 {
-                    printf("distribute get\n");
-                    conn->on_write_=url_workers.at(url).OnGetFunc();
+                    auto on_get=url_workers.at(url).OnGetFunc();
+                    conn->SetOnWrite(on_get);
                 }
                 else if((*request_ptr)["method"] == "POST")
                 {
-                    conn->on_write_=url_workers.at(url).OnPostFunc();
+                    auto on_post=url_workers.at(url).OnPostFunc();
+                    conn->SetOnWrite(on_post);
                 }
                 else if((*request_ptr)["method"] == "DELETE")
                 {
-                    conn->on_write_=url_workers.at(url).OnDeleteFunc();
+                    auto on_delete=url_workers.at(url).OnDeleteFunc();
+                    conn->SetOnWrite(on_delete);
                 }
                 else if((*request_ptr)["method"] == "OPTIONS")
                 {
-                    conn->on_write_=url_workers.at(url).OnOptionsFunc();
+                    auto on_options=url_workers.at(url).OnOptionsFunc();
+                    conn->SetOnWrite(on_options);
                 }
                 else
                 {
@@ -141,6 +145,7 @@ Rester::Rester(const Config& config)
 
             }
             int ret = send(fd, response_buf + sent_size, left, MSG_DONTWAIT);
+            printf("in while sent size %d, response_size %d\n",sent_size, response_size);
             if (ret <= 0)
             {
                 //printf("in while sent size %d, response_size %d\n",sent_size, response_size);
@@ -256,7 +261,7 @@ void Rester::Init()
         perror("epoll add");
         exit(1);
     }
-    //ain eventloop
+    //main eventloop
     while(running_)
     {
         int nfds = epoll_wait(epoll_fd_, events, listen_n, 5);
@@ -280,7 +285,7 @@ void Rester::Init()
                     }
                     g_connection_count++;
 
-                    LOG_INFO("new connection %s:%d",inet_ntoa(c_addr.sin_addr), ntohs(c_addr.sin_port))
+//                    LOG_INFO("new connection %s:%d",inet_ntoa(c_addr.sin_addr), ntohs(c_addr.sin_port))
                     auto connection=make_shared<Connection>(this);
                     connection->connected_fd_ = nfd;
                     //connection->ip_ = ntohl(c_addr.sin_addr.s_addr);
@@ -291,13 +296,16 @@ void Rester::Init()
                     ev.events = EPOLLIN|EPOLLET|EPOLLRDHUP|EPOLLERR;//no EPOLLOUT first, and then add after read
                     ev.data.fd = nfd;
                     connection->event_=ev;
-                    on_connect_(connection);
+
+                    on_connect_(connection);//for rester
+                    connection->OnConnect();//for specific connection, but no data, no router, no specific on_connect
                     ConnectionsThread* thread=thread_pool_->GetThread();
                     connection->Init(thread);//connection detach  new connection go to connection thread;
                 }
             }
         }
     }
+
 }
 
 void Rester::AddWorker(const Router &worker)

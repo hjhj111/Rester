@@ -14,6 +14,41 @@ Log::Log()
 
 Log::~Log()
 {
+    end_thread=1;
+    void* tmp;
+    if(m_is_async)
+    {
+        auto res=pthread_detach(write_thread);
+        if (res != 0)
+        {
+            printf("等待线程失败\n");
+        }
+        else
+        {
+            printf("等待线程chenggong\n");
+        }
+    }
+
+    do
+    {
+        string single_log;
+        //queue may be empty()
+        if(m_log_queue->empty())
+        {
+            continue;
+        }
+        auto ret=m_log_queue->pop(single_log);
+        while (ret)
+        {
+            cout<<single_log<<endl;
+            //m_mutex.lock();
+            fputs(single_log.c_str(), m_fp);
+            //m_mutex.unlock();
+            ret=m_log_queue->pop(single_log);
+        }
+    }
+    while (0);
+
     if (m_fp != NULL)
     {
         fclose(m_fp);
@@ -30,6 +65,7 @@ bool Log::init(const char *file_name, int close_log, int log_buf_size, int split
         pthread_t tid;
         //flush_log_thread为回调函数,这里表示创建线程异步写日志
         pthread_create(&tid, NULL, flush_log_thread, NULL);
+        write_thread=tid;
     }
     
     m_close_log = close_log;

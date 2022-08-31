@@ -40,6 +40,7 @@ Connection::Connection(Rester* server)
 void Connection::Close()
 {
     printf(" close\n");
+    OnClose();
     thread_->DeleteConnection(GetShare() );
 }
 
@@ -53,4 +54,9 @@ void Connection::Init(ConnectionsThread* thread)
 bool Connection::operator==(const Connection &other)
 {
     return this->connected_fd_ == other.connected_fd_;
+}
+
+void Connection::SetOnWrite(GetCallBack on_write)
+{
+    on_write_=on_write;
 }

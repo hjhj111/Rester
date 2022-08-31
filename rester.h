@@ -24,6 +24,13 @@ class Rester
 public:
     Rester(const Config&);
 
+    Rester();
+
+    ~Rester()
+    {
+        delete thread_pool_;
+    }
+
     Rester(const Rester& ) = delete;
 
     Rester& operator = (const Rester& ) = delete;

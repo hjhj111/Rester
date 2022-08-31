@@ -64,17 +64,31 @@ public:
 
     Connection(Rester* server);
 
-//    Connection(const Connection& connection);
-//
-//    Connection& operator=(const Connection& connection);
-
     void Init(ConnectionsThread* thread);
 
     bool operator==(const Connection& other);
 
     void Close();
 
+    void SetOnWrite(GetCallBack on_write);
 
+    void OnConnect()
+    {
+        if(on_connect_)
+        {
+            on_connect_(shared_from_this());
+        }
+    }
+
+    void OnClose()
+    {
+        if(on_close_)
+        {
+            on_close_(shared_from_this());
+        }
+    }
+
+//convenient to operate
 public:
     unsigned int ip_;          //client ip
     unsigned short int port_;   //client port
@@ -88,9 +102,13 @@ public:
     int sent_size_=0;
     bool read=false;
     //callback
-    PostCallBack  on_post_;
-    GetCallBack  on_get_;
-    GetCallBack on_write_;// get/post
+    //PostCallBack  on_post_;
+    //GetCallBack  on_get_;
+    GetCallBack on_write_;// for all methods
+    CloseCallBack on_close_;
+
+    //deprecated
+    ConnectCallBack  on_connect_;
 
     RequestPtr request_ptr_;
     ResponsePtr response_ptr_;
