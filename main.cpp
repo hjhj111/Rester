@@ -31,11 +31,19 @@ int main(int argc, char *argv[])
     }
     printf("log inited\n");
 
+    auto& connection_pool=ConnectionPool::GetInstance();//auto can not carry & itself
+
     Router note_book("/notes");//default router
 
-    auto on_get= [](RequestPtr request_ptr,ResponsePtr response_ptr)
+    auto on_get= [&connection_pool](RequestPtr request_ptr,ResponsePtr response_ptr)
     {
-        auto client =ConnectToRedis();
+        //auto client =ConnectToRedis();
+        auto client=connection_pool.GetClient();
+        ClientHelper client_helper(connection_pool,client);//for automatic return client
+//        if(client== nullptr)
+//        {
+//            client =ConnectToRedis();
+//        }
         cpp_redis::reply reply1;
 //        client->get("notes_list", [&reply1](cpp_redis::reply& reply) {
 //            reply1=reply;
@@ -94,9 +102,11 @@ int main(int argc, char *argv[])
     };
     note_book.SetGet(on_get);
 
-    auto on_post=[](RequestPtr request_ptr,ResponsePtr response_ptr)
+    auto on_post=[&connection_pool](RequestPtr request_ptr,ResponsePtr response_ptr)
     {
-        auto client =ConnectToRedis();
+//        auto client =ConnectToRedis();
+        auto client=connection_pool.GetClient();
+        ClientHelper client_helper(connection_pool,client);//for automatic return client
         cpp_redis::reply reply1;
         cout<<"body: "<<(*request_ptr)["body"]<<(*request_ptr)["body"].size()<<endl;
         client->lpush("notes_list",vector<string>{(*request_ptr)["body"]},[response_ptr](cpp_redis::reply& reply){
@@ -135,9 +145,11 @@ int main(int argc, char *argv[])
     };
     note_book.SetOptions(on_options);
 
-    auto on_delete=[](RequestPtr request_ptr,ResponsePtr response_ptr)
+    auto on_delete=[&connection_pool](RequestPtr request_ptr,ResponsePtr response_ptr)
     {
-        auto client =ConnectToRedis();
+//        auto client =ConnectToRedis();
+        auto client=connection_pool.GetClient();
+        ClientHelper client_helper(connection_pool,client);//for automatic return client
         cpp_redis::reply reply1;
         cout<<"body: "<<(*request_ptr)["body"]<<(*request_ptr)["body"].size()<<endl;
         client->lrem("notes_list",0,(*request_ptr)["body"],[response_ptr](cpp_redis::reply& reply){
@@ -166,7 +178,6 @@ int main(int argc, char *argv[])
 
     auto on_close=[](ConnectionPtr conn)
     {
-
         struct in_addr tmp;
         tmp.s_addr=conn->ip_;
         auto str_ip=inet_ntoa(tmp);
@@ -175,7 +186,7 @@ int main(int argc, char *argv[])
     };
     note_book.SetClose(on_close);
 
-    //TODO on_post_ redis
+
     server_ptr->AddWorker(note_book);
 
 

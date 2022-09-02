@@ -29,6 +29,7 @@
 #include "log/log.h"
 #include "http-parser/HttpParser.h"
 #include "http-parser/httpresponse.h"
+#include "ConnectionPool.h"
 
 using namespace rapidjson;
 
