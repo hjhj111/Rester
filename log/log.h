@@ -62,7 +62,7 @@ public:
         //从阻塞队列中取出一个日志string，写入文件
         while (!end_thread)
         {
-            cout<<"writing------------"<<m_log_queue->size()<<endl;
+            cout<<"writing log------------"<<m_log_queue->size()<<endl;
             auto ret=m_log_queue->pop(single_log);
             if(ret)
             {
@@ -71,8 +71,7 @@ public:
                 m_mutex.unlock();
             }
         }
-        cout<<"write over------------"<<endl;
-
+        cout<<"write log over------------"<<endl;
     }
 
 public:

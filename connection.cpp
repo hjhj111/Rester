@@ -39,16 +39,15 @@ Connection::Connection(Rester* server)
 
 void Connection::Close()
 {
-    printf(" close\n");
+    printf("close\n");
     OnClose();
     thread_->DeleteConnection(GetShare() );
 }
 
-void Connection::Init(ConnectionsThread* thread)
+void Connection::AddToThread(ConnectionsThread* thread)
 {
     thread_=thread;
     thread->AddConnection(GetShare());
-
 }
 
 bool Connection::operator==(const Connection &other)
@@ -59,4 +58,58 @@ bool Connection::operator==(const Connection &other)
 void Connection::SetOnWrite(GetCallBack on_write)
 {
     on_write_=on_write;
+}
+
+void Connection::SendOver()
+{
+    printf("send over\n");
+    sent_size_=0;
+    read=false;
+    //request_ptr_= nullptr;
+    //response_ptr_= nullptr;
+    response_ptr_= make_shared<Response>();
+    RemoveEpollOut();
+    if(ShortConnection)
+    {
+        Close();
+    }
+}
+
+void Connection::AddEpollOut()
+{
+    auto ev=event_.events;
+    ev=EPOLLIN|EPOLLET|EPOLLRDHUP|EPOLLERR|EPOLLOUT;
+    event_.events=ev;
+    auto ret=epoll_ctl(thread_->epoll_fd_, EPOLL_CTL_MOD, connected_fd_ , &event_);
+    if(ret<0)
+    {
+        perror("epoll mod err: ");
+    }
+    else
+    {
+        printf("add epollout\n");
+    }
+}
+void Connection::RemoveEpollOut()
+{
+    auto ev=event_.events;
+    ev=EPOLLIN|EPOLLET|EPOLLRDHUP|EPOLLERR;
+    event_.events=ev;
+    auto ret=epoll_ctl(thread_->epoll_fd_, EPOLL_CTL_MOD, connected_fd_ , &event_);
+    if(ret<0)
+    {
+        perror("epoll mod err: ");
+    }
+    else
+    {
+        printf("remove epollout\n");
+    }
+//    if(event_.events & EPOLLOUT)
+//    {
+//        printf("EPOLLOUT not removed\n");
+//    }
+//    else
+//    {
+//        printf("EPOLLOUT is removed\n");
+//    }
 }

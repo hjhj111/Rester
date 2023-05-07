@@ -57,12 +57,6 @@ struct Config
         Document d;
         d.Parse(raw_str.c_str());
 
-    //    FILE* fp = fopen("config.json", "r"); // 非 Windows 平台使用 "r"
-    //    char readBuffer[65536];
-    //    FileReadStream is(fp, readBuffer, sizeof(readBuffer));
-    //    Document d;
-    //    d.ParseStream(fp);
-
         if(d.HasParseError())
         {
             printf("parse json error\n");
@@ -96,11 +90,9 @@ struct Config
         }
         port=d["port"].GetInt();
 
-
         printf("config: %s\n", raw_str.c_str());
         cout<<"result of json parsing---------"<<endl;
         fp.close();
-        //fclose(fp);
     }
 
 };
@@ -131,8 +123,6 @@ using OptionsCallBack=function<void(RequestPtr,ResponsePtr)>;
 
 
 extern atomic<int> g_request_count;
-extern atomic<int> g_connection_count;
-extern atomic<int> g_add_and_delete_socket_time;
 extern int g_recv_buf_size;
 extern int g_once_sent_size;
 
@@ -142,27 +132,29 @@ inline bool RecvOnce(int fd, char buf[], int& size_read)
     int ind=0;
     int n_try=0;
     bool ret=true;
-    //link=true;
     while (true)
     {
         n_try++;
         int ret = recv(fd,buf+ind, g_recv_buf_size - ind, MSG_DONTWAIT);
-
-        if (ret==-1)
+        if (ret<0)
         {
             printf("%s\n", strerror(errno));
-            if (size_read>0)// //(errno == EAGAIN||errno == EWOULDBLOCK)
+            if (errno == EAGAIN||errno == EWOULDBLOCK)
             {
+                //continue;
+                perror("eagain in readn(mean client closed)");
                 break;
             }
             else
             {
+                perror("other error in readn");
                 ret=false;
                 break;
             }
         }
         else if(ret==0)
         {
+            perror("client closed\n");
             ret=false;
             break;
         }
@@ -204,79 +196,6 @@ inline void ReadFilePart(ifstream& f_read, int part_size , char* & buf)
     f_read.read(buf,part_size);
 }
 
-//for multipart/form
-//TODO
-inline pair<int,int> GetFileChunk(const char* file_path_name, char*& buf, char* head, int head_size)
-{
-    ifstream f_read(file_path_name);
-    if(f_read.fail())
-    {
-        printf("file not open: ");
-        return make_pair(-1,-1);
-    }
-    int length= GetFileSize(f_read) - 1;
-
-    int n= length / g_once_sent_size + 1;
-    printf("file length %d chunk %d\n",length,n);
-    int buf_length=length+5000;
-    buf=new char[buf_length];
-    strcpy(buf,head);
-    int ind=head_size;
-    char gap[]={'2','7','1','0','\r','\n'};//"1\r\n"; //10000
-    for(int i=0;i<n;i++)
-    {
-        //printf("%d\n",i);
-        if(i==n-1)
-        {
-            int left=length- (n-1) * g_once_sent_size;
-//            int left_bit=0;
-//            int left1=left;
-//            while(true)
-//            {
-//                if((left1/=10)>0)
-//                {
-//                    left_bit+=1;
-//                }
-//                else
-//                {
-//                    left_bit+=1;
-//                    break;
-//                }
-//            }
-            if(left>0)
-            {
-                char gap_last[7];
-                snprintf(gap_last,sizeof(gap_last),"%s\r\n", "17fc");//dec2hex(left,4).c_str()
-                strcpy(buf+ind,gap_last);
-                ind+= strlen(gap_last);
-                f_read.read(buf+ind,left);
-                ind+=left;
-            }
-
-
-            char en[]="0\r\n\r\n";
-            strcpy(buf+ind,en);
-            ind+=5;
-        }
-        else
-        {
-            strcpy(buf+ind,gap);
-            ind+=sizeof(gap);
-            f_read.read(buf+ind, g_once_sent_size);
-            ind+=g_once_sent_size;
-            char en[]="\r\n";
-            strcpy(buf+ind,en);
-            ind+=2;
-        }
-        //printf("%d\n",i);
-    }
-    f_read.close();
-
-    //buf_length= strlen(buf);
-    buf_length=ind;
-    return make_pair(length,buf_length);
-
-}
 
 //for connection id
 inline int GetUid()
@@ -311,42 +230,6 @@ inline void PrintRaw(char* raw, int size)
         }
     }
 }
-
-//TODO connections  pool
-inline cpp_redis::client* ConnectToRedis()
-{
-    static cpp_redis::client client;
-    if(!client.is_connected())
-    {
-        client.connect("192.168.56.1", 6379,//115.156.245.91
-                       [](const std::string &host, std::size_t port, cpp_redis::client::connect_state status)
-                       {
-                           if (status == cpp_redis::client::connect_state::ok)
-                           {
-                               std::cout << "client connected to " << host << ":" << port << std::endl;
-                           }
-                       });
-    }
-   return &client;
-}
-
-
-// wrong when declared here for http header checking in httpresponse.h
-//bool StrSame(const std::string& s1, const std::string& s2)
-//{
-//    if(s1.size()!=s2.size())
-//    {
-//        return false;
-//    }
-//    for(int i=0;i<s1.size();i++)
-//    {
-//        if(s1[i]!=s2[i]&&std::abs(s1[i]-s2[i])!=26)
-//        {
-//            return false;
-//        }
-//    }
-//    return true;
-//}
 
 /*exit code 1 listen fd error
  * 2 client fd error

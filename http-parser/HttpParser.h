@@ -45,7 +45,7 @@ using RequestPtr=shared_ptr<HttpParser>;
 
 inline HttpParser::HttpParser(char* msg, int size){
     std::string buf(msg,size);
-    cout<<buf<<endl;
+//    cout<<buf<<endl;
     std::istringstream buf_stream(buf);
     enum parts{
         start_line,

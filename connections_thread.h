@@ -27,7 +27,7 @@ public:
     {
         running_= false;
         connections_new_.clear();
-        connections_removed_.clear();
+        //connections_removed_.clear();
         //connections_.clear();
         connection_thread_.join();
     }
@@ -38,28 +38,20 @@ public:
 
     void DeleteConnection(ConnectionPtr conn);
 
-    ConnectionPtr GetConnection(int fd)
-    {
-
-    }
-
     Rester* server_;
     thread connection_thread_;
     atomic<bool> running_{true};
-
-    //list<ConnectionPtr> connections_;
-
-    mutex mutex_new_;
-    list<ConnectionPtr> connections_new_;
-    mutex mutex_removed_;
-    list<ConnectionPtr> connections_removed_;
-    //no need
-    //mutex mutex_map_;
-    unordered_map<int,ConnectionPtr> fds_connections_;
     int max_connection_;
     int epoll_fd_;
 
-    vector<ConnectionFunc> connection_funcs;
+    mutex mutex_new_;
+    list<ConnectionPtr> connections_new_;
+    unordered_map<int,ConnectionPtr> fds_connections_;
+//    mutex mutex_removed_;
+//    list<ConnectionPtr> connections_removed_;
+
+private:
+    int AddConnectionTrue(ConnectionPtr conn);
 };
 
 #endif // CONNECTIONTHREAD_H

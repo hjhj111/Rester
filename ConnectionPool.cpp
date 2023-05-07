@@ -10,4 +10,4 @@ ConnectionPool &ConnectionPool::GetInstance()
     return connection_pool;
 }
 
-int ConnectionPool::size_=10;
+int ConnectionPool::size_=1000;

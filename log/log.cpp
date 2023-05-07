@@ -25,29 +25,33 @@ Log::~Log()
         }
         else
         {
-            printf("等待线程chenggong\n");
+            printf("等待线程");
         }
     }
 
-    do
+    if(m_log_queue)
     {
-        string single_log;
-        //queue may be empty()
-        if(m_log_queue->empty())
+        do
         {
-            continue;
+            string single_log;
+            //queue may be empty()
+            if(m_log_queue->empty())
+            {
+                continue;
+            }
+            auto ret=m_log_queue->pop(single_log);
+            while (ret)
+            {
+                cout<<single_log<<endl;
+                //m_mutex.lock();
+                fputs(single_log.c_str(), m_fp);
+                //m_mutex.unlock();
+                ret=m_log_queue->pop(single_log);
+            }
         }
-        auto ret=m_log_queue->pop(single_log);
-        while (ret)
-        {
-            cout<<single_log<<endl;
-            //m_mutex.lock();
-            fputs(single_log.c_str(), m_fp);
-            //m_mutex.unlock();
-            ret=m_log_queue->pop(single_log);
-        }
+        while (0);
     }
-    while (0);
+
 
     if (m_fp != NULL)
     {
@@ -57,6 +61,7 @@ Log::~Log()
 //异步需要设置阻塞队列的长度，同步不需要设置
 bool Log::init(const char *file_name, int close_log, int log_buf_size, int split_lines, int max_queue_size)
 {
+
     //如果设置了max_queue_size,则设置为异步
     if (max_queue_size >= 1)
     {
@@ -107,6 +112,10 @@ bool Log::init(const char *file_name, int close_log, int log_buf_size, int split
 
 void Log::write_log(int level, const char *format, ...)
 {
+    if(m_close_log)
+    {
+        return ;
+    }
     struct timeval now = {0, 0};
     gettimeofday(&now, NULL);
     time_t t = now.tv_sec;

@@ -63,16 +63,18 @@ private:
         for(int i=0;i<size_;i++)
         {
             cpp_redis::client* client=new cpp_redis::client;
-            client->connect("192.168.56.1", 6379,//115.156.245.91
+            client->connect("115.156.245.91", 6379,//115.156.245.91    192.168.56.1
                [](const std::string &host, std::size_t port, cpp_redis::client::connect_state status)
                {
-                   if (status == cpp_redis::client::connect_state::ok)
+                   if (status == cpp_redis::client::connect_state::failed)
                    {
-                       std::cout << "client connected to " << host << ":" << port << std::endl;
+                       std::cout<<"connect failed: "<<(int)status<<std::endl;
+                       exit(-20);
                    }
-                   else
+                   else if(status == cpp_redis::client::connect_state::ok)
                    {
-                       std::cout<<"connection pool err when init"<<std::endl;
+//                       std::cout << "client connected to " << host << ":" << port
+//                       <<"  connection status: "<<(int)status<< std::endl;
                    }
                });
             clients_.push_back(client);

@@ -32,35 +32,7 @@ void ConnectionsThread::Init()
         while (running_)
         {
             //printf("connection thread running\n");
-            //delete closed connection
-            list<ConnectionPtr> connections_removed;
-            {
-                lock_guard<mutex> guard(mutex_removed_);
-                if (!connections_removed_.empty())
-                {
-                    connections_removed.swap(connections_removed_);
-                    connections_removed_.clear();
-                }
-            }
-            for(auto conn:connections_removed)
-            {
-                ret=epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, conn->connected_fd_ , &conn->event_);
-                if(ret<0)
-                {
-                    //perror("epoll remove wrong\n");
-                    continue;
-                    exit(12);
-                }
-//                if(std::find(connections_.begin(), connections_.end(), conn)!=connections_.end())
-//                {
-//                    connections_.remove(conn);
-//                }
-                if(fds_connections_.find(conn->connected_fd_)!=fds_connections_.end())
-                {
-                    fds_connections_.erase(fds_connections_.find(conn->connected_fd_));
-                }
-            }
-            //add new connection
+            //add new connection from main event loop
             list<ConnectionPtr> connections_new;
             {
                 lock_guard<mutex> guard(mutex_new_);
@@ -72,28 +44,7 @@ void ConnectionsThread::Init()
             }
             for(auto conn:connections_new)
             {
-                /*设置成非阻塞模式*/
-                int flags = fcntl(conn->connected_fd_, F_GETFL, 0);
-                if(flags < 0)
-                {
-                      perror("fcntl F_GETFL");
-                      exit(2);
-                }
-                flags |= O_NONBLOCK;
-                ret = fcntl(conn->connected_fd_, F_SETFL, flags);
-                if(ret < 0)
-                {
-                      perror("fcntl F_SETFL");
-                      exit(2);
-                }
-                ret=epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, conn->connected_fd_ , &conn->event_);
-                if(ret<0)
-                {
-                    perror("epoll add wrong\n");
-                    exit(2);
-                }
-//                connections_.push_back(conn);
-                fds_connections_[conn->connected_fd_]=conn;
+                AddConnectionTrue(conn);
             }
             epoll_event events[max_connection_];
             memset(events, 0x00, sizeof(epoll_event)*max_connection_);
@@ -103,47 +54,60 @@ void ConnectionsThread::Init()
 //            {
 //                printf("connection nums   %d\n",fds_connections_.size());
 //            }
-            if(n_fd == -1 )//&& errno == EINTR
+            if(n_fd <0 && errno == EINTR)
             {
-                exit(3);
+                //exit(3);
                 continue;
             }
             for(int i = 0; i < n_fd; ++i)
             {
+                int event_size=0;
                 if(events[i].events & EPOLLIN)//read,client close or down
                 {
-                    if(fds_connections_.find(events[i].data.fd)!=fds_connections_.end())
-                    {
-                        auto conn = fds_connections_.at(events[i].data.fd);
-                        //printf("connection info%d",conn->connected_fd_);
-                        server_->on_read_(conn);
-                    }
+                    event_size++;
+//                    if(fds_connections_.find(events[i].data.fd)!=fds_connections_.end())
+//                    {
+                    auto conn = fds_connections_.at(events[i].data.fd);
+                    server_->on_read_(conn);
+//                    }
                 }
                 if(events[i].events & EPOLLOUT)  //connected also trigger
                 {
-                    if(fds_connections_.find(events[i].data.fd)!=fds_connections_.end())
-                    {
+                    event_size++;
+//                    if(fds_connections_.count(events[i].data.fd))
+//                    {
                         auto conn=fds_connections_.at(events[i].data.fd);
-                        if(conn->read)
-                        {
-                            server_->on_write_(conn);
-                        }
-                    }
-                    //exit(7);
+                        server_->on_write_(conn);
+//                    }
+//                    else
+//                    {
+//                      exit(-333);
+//                    }
+
                 }
-                if(events[i].events & EPOLLRDHUP)
+                if(events[i].events & EPOLLRDHUP )//peer close can trigger except for epollin
                 {
-                    if(fds_connections_.find(events[i].data.fd)!=fds_connections_.end())
+                    event_size++;
+                    perror("epoll rdhup || err");
+                    if(fds_connections_.count(events[i].data.fd))
                     {
                         auto conn = fds_connections_.at(events[i].data.fd);
                         conn->Close();
-                        //exit(8);
+//                        printf("conn ptr count: %d",conn.use_count());
+//                        exit(8);
                     }
                 }
                 if(events[i].events & EPOLLERR)
                 {
-                    exit(9);
+                    if(fds_connections_.count(events[i].data.fd))
+                    {
+                        auto conn = fds_connections_.at(events[i].data.fd);
+                        conn->Close();
+//                        printf("conn ptr count: %d",conn.use_count());
+//                        exit(8);
+                    }
                 }
+                printf("event_size: %d\n",event_size);
             }
 
         }
@@ -156,22 +120,49 @@ void ConnectionsThread::AddConnection(ConnectionPtr conn)
     {
         lock_guard<mutex> guard(mutex_new_);
         connections_new_.push_back(conn);
-//        fds_connections_[conn->connected_fd_]=conn;
     }
 }
 
 void ConnectionsThread::DeleteConnection(ConnectionPtr conn)
 {
-    //return;
     //printf(" delete\n");
+    int ret=epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, conn->connected_fd_ , &conn->event_);
+    if(ret<0)
     {
-        lock_guard<mutex> guard(mutex_removed_);
-        connections_removed_.push_back(conn);
-//        if(fds_connections_.find(conn->connected_fd_)!=fds_connections_.end())
-//        {
-//            fds_connections_.erase(fds_connections_.find(conn->connected_fd_));
-//        }
+        perror("epoll remove wrong\n");
+        exit(12);
     }
-    //printf(" delete\n");
+//    if(fds_connections_.count(conn->connected_fd_))
+//    {
+        fds_connections_.erase(conn->connected_fd_);
+//    }
+}
+
+int ConnectionsThread::AddConnectionTrue(ConnectionPtr conn)
+{
+    int ret=0;
+    int flags = fcntl(conn->connected_fd_, F_GETFL, 0);
+    if(flags < 0)
+    {
+        perror("fcntl F_GETFL");
+        return ret;
+        exit(2);
+    }
+    flags |= O_NONBLOCK;//设置成非阻塞模式
+    ret = fcntl(conn->connected_fd_, F_SETFL, flags);
+    if(ret < 0)
+    {
+        perror("fcntl F_SETFL");
+        return ret;
+        exit(2);
+    }
+    ret=epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, conn->connected_fd_ , &conn->event_);
+    if(ret<0)
+    {
+        perror("epoll add wrong\n");
+        return ret;
+        exit(2);
+    }
+    fds_connections_[conn->connected_fd_]=conn;
 }
 

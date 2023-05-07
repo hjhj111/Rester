@@ -13,11 +13,11 @@ Rester::Rester(const Config& config)
 {
     on_connect_=[](ConnectionPtr conn)
     {
-        printf("on connected\n");
+        printf("rester on connected\n");
         struct in_addr tmp;
         tmp.s_addr=conn->ip_;
         auto str_ip=inet_ntoa(tmp);
-        LOG_INFO("new connection:%s： %d",str_ip,conn->port_);
+//        LOG_INFO("new connection:%s： %d",str_ip,conn->port_);
     };
 
     on_read_=[](ConnectionPtr conn)
@@ -25,24 +25,22 @@ Rester::Rester(const Config& config)
         printf("on read\n");
         int fd=conn->connected_fd_;
         int size_read=0;
-        bool link=true;
+        bool linked=true;
         char buf[1000];
 
-        link= RecvOnce(fd, buf, size_read);
-        if(!link||size_read==0)//&&size_read==0 mean connection closed by client
+        linked= RecvOnce(fd, buf, size_read);
+        if(!linked)//&&size_read==0 mean connection closed by client
         {
-            printf("recv once %d %d \n",link,size_read);
+            printf("recv once link: %d  size_read: %d \n", linked, size_read);
             conn->Close();
+
         }
-        else
+        if(size_read>0)
         {
-            printf("%s",buf);
-            LOG_INFO(buf);
+            printf("read once: %s",buf);
+//            LOG_INFO(buf);
             conn->request_ptr_=make_shared<HttpParser>(buf,size_read);
             auto request_ptr=conn->request_ptr_;
-//            parser.show();
-//            printf("key1: %s  key2: %s\n",parser.GetUrlParameter("key1").c_str(),
-//                   parser.GetUrlParameter("key2").c_str());
             auto url=(*request_ptr)["url"];
             printf("url: %s\n",url.c_str());
             auto& url_workers=conn->server_->url_workers_;
@@ -132,11 +130,12 @@ Rester::Rester(const Config& config)
         }
         else if (sent_size == response_size)
         {
-            conn->Close();
+//            conn->Close();
+            conn->SendOver();
             return;
         }
         //sent_size=0;
-        while (sent_size < response_size)
+        if(sent_size < response_size)
         {
             int left = response_size - sent_size;
             if (left > g_once_sent_size)
@@ -145,32 +144,29 @@ Rester::Rester(const Config& config)
 
             }
             int ret = send(fd, response_buf + sent_size, left, MSG_DONTWAIT);
-            printf("in while sent size %d, response_size %d\n",sent_size, response_size);
-            if (ret <= 0)
+//            printf("in while sent size %d, response_size %d\n",sent_size, response_size);
+            if (ret <0)
             {
-                //printf("in while sent size %d, response_size %d\n",sent_size, response_size);
                 perror("send wrong\n");
-                //LOG_ERROR("send wrong int on_get");
-                break;
+                //exit(6);
+                conn->Close();
+                //break;
             }
+
             else
             {
                 sent_size += ret;
-                printf("send %d %d\n",ret,sent_size);
+                printf("send  this time: %d  all: %d\n",ret,sent_size);
                 if(sent_size==response_size)
                 {
-                    printf("send over\n");
-//                    int z;
-//                    default option: send as far as possible, but no recv
-//                    linger so_linger;
-//                    so_linger.l_onoff=0;
-//                    z= setsockopt(fd,SOL_SOCKET,SO_LINGER,&so_linger,sizeof so_linger);
-//                    if(z)
-//                    {
-//                        perror("setsockoption solinger:");
-//                    }
-                    conn->Close();
+//                    printf("send over\n");
+//                    conn->Close();
+                    conn->SendOver();
                     return;
+                }
+                else
+                {
+                    conn->AddEpollOut();
                 }
             }
 
@@ -239,7 +235,7 @@ void Rester::Init()
         exit(1);
     }
 
-    const int listen_n=1;//////////////////////////////////////////////////////////
+    const int listen_n=1;
     socklen_t cin_len = sizeof(struct sockaddr_in);
     epoll_event events[listen_n];
     epoll_event event;
@@ -261,15 +257,16 @@ void Rester::Init()
         perror("epoll add");
         exit(1);
     }
-    //main eventloop
+    printf("server listening on port: 5000\n");
+    //main event loop
     while(running_)
     {
-        int nfds = epoll_wait(epoll_fd_, events, listen_n, 5);
-        if(nfds == -1 && errno == EINTR)
+        int nums = epoll_wait(epoll_fd_, events, listen_n, 5);
+        if(nums == -1 && errno == EINTR)
         {
             running_=false;
         }
-        for(int i = 0; i < nfds; ++i)
+        for(int i = 0; i < nums; ++i)
         {
             //printf("main loop");
             if(events[i].data.fd == listen_fd_)  //监听新连接
@@ -279,33 +276,30 @@ void Rester::Init()
                     int nfd = accept(listen_fd_,(struct sockaddr*)&c_addr,&cin_len);
                     if(nfd == -1)
                     {
-                        printf("failed accept, error = %s\n", strerror(errno));
-                        //continue;
-                        break;
+                        //printf("failed accept, error = %s\n", strerror(errno));
+                        //cout<<"accept once done"<<endl;
+                        continue;
+                        //break;
                     }
-                    g_connection_count++;
 
-//                    LOG_INFO("new connection %s:%d",inet_ntoa(c_addr.sin_addr), ntohs(c_addr.sin_port))
                     auto connection=make_shared<Connection>(this);
                     connection->connected_fd_ = nfd;
-                    //connection->ip_ = ntohl(c_addr.sin_addr.s_addr);
                     connection->ip_ = c_addr.sin_addr.s_addr;//keep net byte order
                     connection->port_ = ntohs(c_addr.sin_port);
-                    connection->is_on_ = false;
                     epoll_event ev;
                     ev.events = EPOLLIN|EPOLLET|EPOLLRDHUP|EPOLLERR;//no EPOLLOUT first, and then add after read
                     ev.data.fd = nfd;
                     connection->event_=ev;
 
                     on_connect_(connection);//for rester
-                    connection->OnConnect();//for specific connection, but no data, no router, no specific on_connect
+                    connection->OnConnect();//for specific connection
+
                     ConnectionsThread* thread=thread_pool_->GetThread();
-                    connection->Init(thread);//connection detach  new connection go to connection thread;
+                    connection->AddToThread(thread);//connection detach  new connection go to connection thread;
                 }
             }
         }
     }
-
 }
 
 void Rester::AddWorker(const Router &worker)

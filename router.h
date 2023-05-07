@@ -22,7 +22,7 @@ public:
     explicit Router(string url)
             : url_(url)
     {
-        LOG_INFO("add router %s", url.c_str());
+//        LOG_INFO("add router %s", url.c_str());
     }
 
     void SetGet(GetCallBack on_get)
